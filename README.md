@@ -27,8 +27,7 @@ Simulation, afternoon of October 15th, 17:26
 ![UI3](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/www/mw_dusk_02.jpg "WRTH 1975 scenario")
 Simulation, afternoon of October 15th, 18:52 , foreign radio stations can now also be received via skywave on radios powered by the AMWaveSynth.
 
-Custom transmitter definitions can be stored as a CSV file in the tx_sites folder. Each line represents a transmitter site, consisting of the transmitters location, country code, frequency in kHz, 
-transmission power in kW, and transmitter name. 
+Custom transmitter definitions can be stored as a CSV file in the tx_sites folder. Each line represents a transmitter site, consisting of the transmitters location, country code, frequency in kHz, transmission power in kW, and call/name of radiostation. 
 Upon startup, the program searches this folder for new transmitter definitions and resolves the location data to GPS coordinates using ArcGIS. 
 These coordinates are automatically cached in an SQL database for immediate availability upon the next program start. Transmitter and receiver locations are displayed using a TkinterMapView.
 
