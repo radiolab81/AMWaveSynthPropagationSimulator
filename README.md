@@ -1,8 +1,8 @@
-### AMWaveSynth-addon for dynamic control of signal amplitudes based on annual and daily propagation conditions at a receiver location.
+### AMWaveSynth-addon for dynamic control of signal amplitudes based on annual and daily propagation conditions.
 
 
 Based on transmitter data such as location and transmission power, which can be obtained, for example, from older WRTH, 
-receiver positions can be defined using a map. At these receiver locations, the propagation conditions of ground and sky waves can be simulated 
+receiver positions can be defined using a map. At these receiver locations, the conditions of ground and sky waves can be simulated 
 according to simplified models ITU-R P.368-10 / ITU-R P.1147-2, varying by year and time of day. 
 The resulting data can be used in time-lapse or real-time to control the artificial carriers of the AMWaveSynth modulator, providing an 
 even more realistic representation of the transmitted signal at specific times of day.
@@ -17,7 +17,7 @@ created radio wave bands.
 ![UI2](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/www/simulator_control_view.jpg "WRTH 1975 scenario")
 
 
-The current status of the control of the transmitter is displayed directly in the simulation window. Additionally, a threshold value for the radio's reception sensitivity can be specified to further filter 
+The current status is displayed directly in the simulation window. Additionally, a threshold value for the radio's reception sensitivity can be specified to further filter 
 the actually receivable stations.
 
 ![UI3](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/www/mw_dusk_01.jpg "WRTH 1975 scenario")
