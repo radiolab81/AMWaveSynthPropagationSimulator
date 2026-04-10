@@ -56,3 +56,21 @@ These coordinates are automatically cached in an SQL database for immediate avai
 - start application
   
 `python3.13 AMWaveSyntPropagationSIM.py`
+
+in one go, simply
+
+```console
+#!/bin/bash
+sudo apt update
+sudo apt install build-essential cmake git python3-tk
+git clone https://github.com/radiolab81/AMWaveSynthPropagationSimulator
+sudo curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/usr/local/bin" INSTALLER_NO_MODIFY_PATH=1 sudo -E sh
+cd AMWaveSynthPropagationSimulator
+uv venv --python 3.13
+source .venv/bin/activate
+uv init
+uv add -r requirements.txt
+source .venv/bin/activate
+python3.13 AMWaveSyntPropagationSIM.py
+
+```
