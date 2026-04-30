@@ -1,11 +1,11 @@
 import tkinter as tk
-from tkinter import ttk
-import os, glob, csv, sqlite3, re, time, math, socket
+from tkinter import ttk, simpledialog
+import os, glob, csv, sqlite3, re, time, math, socket, threading, random
 from datetime import datetime
 from tkintermapview import TkinterMapView
 from geopy.geocoders import ArcGIS
 
-# --- LOKALISIERUNGSDATEN ---
+# --- LOKALISIERUNGSDATEN (Inkl. Gewitter-Erweiterungen) ---
 LANGUAGES = {
     "DE": {
         "title": "Ausbreitungssimulator für HF-Modulator Steuerung (UDP 8888)",
@@ -14,8 +14,10 @@ LANGUAGES = {
         "list_hdr": "dB | Hz | Name | Modus | ms", "fast": "⏩ Fast-Forward",
         "fast_stop": "■ Stop Fast", "real": "▶ Echtzeit Start", "real_stop": "■ Echtzeit Stop",
         "rec_marker": "🏠 Empfänger", "rec_menu": "Empfänger hierher",
-	"mod_menu": "Modulator", "mod_off": "Alle AUS (0.0)", "mod_max": "Alle MAX (1.0)", "mod_custom": "Gain Wert setzen..."
-
+        "mod_menu": "Modulator", "mod_off": "Alle AUS (0.0)", "mod_max": "Alle MAX (1.0)", "mod_custom": "Gain Wert setzen...",
+        "sf_title": "⛈ Gewitter-Zelle", "sf_place": "⛈ Gewitter setzen", "sf_click": "👉 Klick in Karte...",
+        "sf_on": "QRN Start", "sf_off": "QRN Stop", "sf_dir": "Richtung (°):", "sf_spd": "Speed (km/h):",
+        "sf_amp": "Basis-Power:", "sf_rate": "Häufigkeit:"
     },
     "EN": {
         "title": "HF Modulator Propagation Simulator Control (UDP 8888)",
@@ -24,7 +26,10 @@ LANGUAGES = {
         "list_hdr": "dB | Hz | Name | Mode | ms", "fast": "⏩ Fast-Forward",
         "fast_stop": "■ Stop Fast", "real": "▶ Start Realtime", "real_stop": "■ Stop Realtime",
         "rec_marker": "🏠 Receiver", "rec_menu": "Receiver here",
-	"mod_menu": "Modulator", "mod_off": "All OFF (0.0)", "mod_max": "All MAX (1.0)", "mod_custom": "Set Gain Value..."
+        "mod_menu": "Modulator", "mod_off": "All OFF (0.0)", "mod_max": "All MAX (1.0)", "mod_custom": "Set Gain Value...",
+        "sf_title": "⛈ Storm Cell", "sf_place": "⛈ Place Storm", "sf_click": "👉 Click Map...",
+        "sf_on": "QRN Start", "sf_off": "QRN Stop", "sf_dir": "Dir (°):", "sf_spd": "Speed (km/h):",
+        "sf_amp": "Base Power:", "sf_rate": "Frequency:"
     },
     "FR": {
         "title": "Simulateur de propagation HF (UDP 8888)",
@@ -33,7 +38,10 @@ LANGUAGES = {
         "list_hdr": "dB | Hz | Nom | Mode | ms", "fast": "⏩ Avance rapide",
         "fast_stop": "■ Arrêter", "real": "▶ Temps réel", "real_stop": "■ Arrêter",
         "rec_marker": "🏠 Récepteur", "rec_menu": "Récepteur ici",
-	"mod_menu": "Modulateur", "mod_off": "Tous OFF (0.0)", "mod_max": "Tous MAX (1.0)", "mod_custom": "Régler le Gain..."
+        "mod_menu": "Modulateur", "mod_off": "Tous OFF (0.0)", "mod_max": "Tous MAX (1.0)", "mod_custom": "Régler le Gain...",
+        "sf_title": "⛈ Orage", "sf_place": "⛈ Placer l'orage", "sf_click": "👉 Cliquer sur carte",
+        "sf_on": "Démarrer QRN", "sf_off": "Arrêter QRN", "sf_dir": "Dir (°):", "sf_spd": "Vitesse (km/h):",
+        "sf_amp": "Puissance:", "sf_rate": "Fréquence:"
     },
     "IT": {
         "title": "Simulatore di propagazione HF (UDP 8888)",
@@ -42,7 +50,10 @@ LANGUAGES = {
         "list_hdr": "dB | Hz | Nome | Modo | ms", "fast": "⏩ Avanti veloce",
         "fast_stop": "■ Ferma", "real": "▶ Tempo reale", "real_stop": "■ Ferma",
         "rec_marker": "🏠 Ricevitore", "rec_menu": "Ricevitore qui",
-	"mod_menu": "Modulatore", "mod_off": "Tutto OFF (0.0)", "mod_max": "Tutto MAX (1.0)", "mod_custom": "Imposta Gain..."
+        "mod_menu": "Modulatore", "mod_off": "Tutto OFF (0.0)", "mod_max": "Tutto MAX (1.0)", "mod_custom": "Imposta Gain...",
+        "sf_title": "⛈ Temporale", "sf_place": "⛈ Piazza temporale", "sf_click": "👉 Clicca sulla mappa",
+        "sf_on": "Avvia QRN", "sf_off": "Ferma QRN", "sf_dir": "Dir (°):", "sf_spd": "Velocità:",
+        "sf_amp": "Potenza:", "sf_rate": "Frequenza:"
     },
     "JP": {
         "title": "HFモジュレーター伝搬シミュレーター (UDP 8888)",
@@ -51,7 +62,10 @@ LANGUAGES = {
         "list_hdr": "dB | Hz | 放送局名 | モード | ms", "fast": "⏩ 早送り",
         "fast_stop": "■ 停止", "real": "▶ リアルタイム開始", "real_stop": "■ 停止",
         "rec_marker": "🏠 受信機", "rec_menu": "受信機をここに設置",
-	"mod_menu": "変調器", "mod_off": "全オフ (0.0)", "mod_max": "全最大 (1.0)", "mod_custom": "ゲイン値を設定..."
+        "mod_menu": "変調器", "mod_off": "全オフ (0.0)", "mod_max": "全最大 (1.0)", "mod_custom": "ゲイン値を設定...",
+        "sf_title": "⛈ 雷雨セル", "sf_place": "⛈ 雷雨を配置", "sf_click": "👉 地図をクリック...",
+        "sf_on": "QRN 開始", "sf_off": "QRN 停止", "sf_dir": "方向 (°):", "sf_spd": "速度 (km/h):",
+        "sf_amp": "基本電力:", "sf_rate": "頻度:"
     }
 }
 
@@ -62,10 +76,25 @@ class RadioMapApp:
         self.root.title(LANGUAGES[self.cur_lang]["title"])
         self.root.geometry("1200x850")
 
-        # UDP Setup für externen liquidDSP Modulator (Port 8888)
+        self.last_pc_minute = -1
+
+        # UDP Setup für externen Modulator (Gain & Sferics Split)
         self.udp_ip = "127.0.0.1"
-        self.udp_port = 8888
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp_port_gain = 8888
+        self.udp_port_sferics = 8889
+        self.sock_gain = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock_sferics = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+        self.is_realtime_running = False
+        self.is_fast_running = False
+
+        # Status & Storm Variablen
+        self.storm_active = False
+        self.storm_placement_mode = False
+        self.storm_pos = [50.0, 10.0]
+        self.storm_life_minutes = 120.0  # Die Zelle lebt 2 Stunde Simulationszeit
+        self.storm_polygon = None
+        self.storm_icons = []
 
         # 1. Datenbank & Geocoder Initialisierung
         self.db_path = "geocache_radio.db"
@@ -80,11 +109,11 @@ class RadioMapApp:
         self.map_widget.pack(fill="both", expand=True)
         self.receiver_coords = (52.52, 13.40) 
         self.receiver_marker = None
-        self.map_widget.set_position(52.52, 13.40); self.map_widget.set_zoom(5)
+        self.map_widget.set_position(52.52, 13.40)
+        self.map_widget.set_zoom(5)
+        self.map_widget.add_left_click_map_command(self.place_storm_callback)
         
         self.setup_menu()
-        self.is_realtime_running = False
-        self.is_fast_running = False
 
         self.open_simulation_window()
         self.load_all_from_folder("tx_sites")
@@ -102,7 +131,6 @@ class RadioMapApp:
         # 2. Modulator-Menü
         self.mod_menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(menu=self.mod_menu)
-
         self.root.config(menu=self.menubar)
 
 
@@ -111,12 +139,24 @@ class RadioMapApp:
         T = LANGUAGES[code]
         
         # UI-Updates im Simulationsfenster
+        self.root.title(T["title"])
         self.sim_win.title(T["title"])
         self.lbl_date_desc.config(text=T["date"])
         self.lbl_time_desc.config(text=T["time"])
         self.lbl_sens_desc.config(text=T["sens"])
         self.lbl_pot_title.config(text=T["pot_head"])
         self.lbl_cur_title.config(text=f"{T['cur_head']} ({T['list_hdr']})")
+        
+        # Gewitter-UI Updates
+        self.sf_frame.config(text=T["sf_title"])
+        self.lbl_sf_dir.config(text=T["sf_dir"])
+        self.lbl_sf_spd.config(text=T["sf_spd"])
+        self.lbl_sf_amp.config(text=T["sf_amp"])
+        self.lbl_sf_rate.config(text=T["sf_rate"])
+        
+        if not self.storm_placement_mode:
+            self.btn_place_storm.config(text=T["sf_place"])
+        self.btn_sferics.config(text=T["sf_off"] if self.storm_active else T["sf_on"])
         
         # Button-Texte
         self.btn_fast.config(text=T["fast_stop"] if self.is_fast_running else T["fast"])
@@ -135,7 +175,7 @@ class RadioMapApp:
         self.mod_menu.add_separator()
         self.mod_menu.add_command(label=T["mod_custom"], command=self.set_global_gain_dialog)
         
-        # Setzt den Titel des 2. Menü-Eintrags (Index 2, da 0=Sprache, 1=Separator/Spacer falls vorhanden)
+        # Setzt den Titel des 2. Menü-Eintrags
         self.menubar.entryconfig(2, label=T["mod_menu"])        
 
         # Marker-Text anpassen
@@ -144,6 +184,201 @@ class RadioMapApp:
             
         self.run_simulation()
 
+    # --- GEWITTER STEUERUNG ---
+    def enable_storm_placement(self):
+        self.storm_placement_mode = True
+        self.btn_place_storm.config(text=LANGUAGES[self.cur_lang]["sf_click"], bg="yellow")
+
+    def place_storm_callback(self, coords):
+        if self.storm_placement_mode:
+            self.storm_pos = [coords[0], coords[1]]
+            self.storm_placement_mode = False
+            self.btn_place_storm.config(text=LANGUAGES[self.cur_lang]["sf_place"], bg="#f0f0f0")
+            self.btn_sferics.config(state="normal")
+            if not self.storm_active: self.toggle_sferics()
+
+    def toggle_storm_panel(self):
+        """Klappt das Gewitter-Panel auf oder zu."""
+        if getattr(self, 'storm_visible', False):
+            self.sf_frame.pack_forget()
+            self.btn_toggle_storm.config(text="⛈ Sferics ▼")
+        else:
+            self.sf_frame.pack(fill="x", padx=10, pady=5, after=self.btn_toggle_storm)
+            self.btn_toggle_storm.config(text="Sferics ▲ ")
+        self.storm_visible = not getattr(self, 'storm_visible', False)
+
+    def apply_storm_profile(self, event=None):
+        """Setzt Slider-Werte basierend auf ITU-Profilvorgaben."""
+        profile = self.storm_profile.get()
+        if profile == "ITU Weak":
+            self.sl_sf_amp.set(800)
+            self.sl_sf_rate.set(2)
+        elif profile == "ITU Medium":
+            self.sl_sf_amp.set(2200)
+            self.sl_sf_rate.set(7)
+        elif profile == "ITU Strong":
+            self.sl_sf_amp.set(4500)
+            self.sl_sf_rate.set(15)
+
+    def toggle_sferics(self):
+        self.storm_active = not self.storm_active
+        self.change_language(self.cur_lang)
+        if self.storm_active:
+            self.storm_icons = []
+            self.storm_last_ui_update = 0.0  # Wichtig für Entkopplung
+            threading.Thread(target=self.storm_engine, daemon=True).start()
+        else:
+            if self.storm_polygon: 
+                self.storm_polygon.delete()
+                self.storm_polygon = None
+            for icon in self.storm_icons:
+                icon.delete()
+            self.storm_icons = []
+
+            if hasattr(self, 'storm_vector') and self.storm_vector:
+                for line in self.storm_vector:
+                    line.delete()
+                self.storm_vector = [] # Liste leeren
+
+
+    def storm_engine(self):
+        last_time = time.time()
+        self.storm_last_ui_update = 0
+    
+        while self.storm_active:
+            current_time = time.time()
+            # Die echte vergangene Zeit (meist ~0.1s wegen sleep)
+            real_dt = current_time - last_time
+            last_time = current_time
+        
+            # --- DER FAST-FORWARD FIX ---
+            # Wenn Fast-Forward aktiv ist, multiplizieren wir die Zeit mal 60
+            time_factor = 60.0 if self.is_fast_running else 1.0
+            dt = real_dt * time_factor
+        
+            # 1. Bewegung (dt ist nun entweder 0.1s oder 6.0s effektiv)
+            speed_deg_s = (self.sl_sf_spd.get() / 3600.0) / 111.0
+            rad = math.radians(self.sl_sf_dir.get())
+        
+            self.storm_pos[0] += math.cos(rad) * speed_deg_s * dt
+            self.storm_pos[1] += math.sin(rad) * speed_deg_s * dt
+        
+            # 2. Grafik-Update (bleibt bei realen 0.5s, sonst flimmert es)
+            if current_time - getattr(self, 'storm_last_ui_update', 0) > 0.5:
+                self.storm_last_ui_update = current_time
+                self.root.after(0, self.draw_storm_circle)
+        
+            # 3. UDP-Sferics (Häufigkeit bei Fast-Forward ebenfalls anpassen?)
+            # Optional: Blitze bei Fast-Forward seltener senden, da sie sonst alles fluten
+            rate_limit = 0.05 if not self.is_fast_running else 0.01
+        
+            dist_km = math.sqrt(((self.storm_pos[0]-self.receiver_coords[0])*111.0)**2 + 
+                               ((self.storm_pos[1]-self.receiver_coords[1])*85.0)**2)
+        
+            if random.random() < (self.sl_sf_rate.get() * rate_limit):
+                attenuation = 1.0 / (1.0 + (max(0, dist_km - 20) / 80.0)**2)
+                amp = int(self.sl_sf_amp.get() * attenuation * random.uniform(0.7, 1.3))
+                if amp > 10:
+                    try:
+                        self.sock_sferics.sendto(f"{amp}:{random.uniform(5,45):.1f}".encode(), 
+                                               (self.udp_ip, self.udp_port_sferics))
+                    except: pass
+
+                time.sleep(0.1)
+
+    def draw_storm_circle(self):
+        """
+        Zeichnet eine runde Zone inkl. Symbolen und Vektorpfeil für Zugrichtung.
+        """
+        if not self.storm_active:
+            return
+        
+        # 1. Kreis-Geometrie mit Mercator-Korrektur
+        cos_lat = math.cos(math.radians(self.storm_pos[0]))
+        aspect_korrektur = 1.0 / cos_lat
+        r_deg = 0.7 
+        
+        pts = []
+        for i in range(0, 360, 10):
+            rad = math.radians(i)
+            lat = self.storm_pos[0] + math.cos(rad) * r_deg
+            lon = self.storm_pos[1] + math.sin(rad) * r_deg * aspect_korrektur
+            pts.append((lat, lon))
+        
+        if self.storm_polygon:
+            self.storm_polygon.delete()
+        
+        self.storm_polygon = self.map_widget.set_polygon(
+            pts, fill_color="", outline_color="#ff3333", border_width=3
+        )
+
+        # 2. Symbole zentrieren
+        symbols = ["⚡", "☁️", "⛈️", "⚡", "☁️"]
+        inner_r = r_deg * 0.6 
+        
+        offsets = [(0,0), (0.4, 0.4), (-0.4, -0.4), (0.3, -0.5), (-0.3, 0.5)]
+                
+        if not self.storm_icons:
+            for i, (off_lat, off_lon) in enumerate(offsets):
+                s_lat = self.storm_pos[0] + off_lat * inner_r
+                s_lon = self.storm_pos[1] + off_lon * inner_r * aspect_korrektur
+                
+                icon = self.map_widget.set_marker(
+                    s_lat, s_lon,
+                    text=symbols[i % len(symbols)],
+                    font=("Arial", 20, "bold"),
+                    marker_color_circle="#ffcc00",
+                    marker_color_outside="#ffcc00" 
+                )
+                icon.image_hidden = True 
+                self.storm_icons.append(icon)
+        else:
+            for i, (off_lat, off_lon) in enumerate(offsets):
+                new_lat = self.storm_pos[0] + off_lat * inner_r
+                new_lon = self.storm_pos[1] + off_lon * inner_r * aspect_korrektur
+                self.storm_icons[i].set_position(new_lat, new_lon)
+                
+                if random.random() > 0.98:
+                    self.storm_icons[i].set_text(random.choice(["⚡", " ", "⛈️"]))
+
+        # 3. Zugrichtung und Geschwindigkeit (Vektorpfeil)
+        # Alte Pfeil-Linien löschen
+        if getattr(self, 'storm_vector', None):
+            for line in self.storm_vector:
+                line.delete()
+        self.storm_vector = []
+        
+        speed = self.sl_sf_spd.get()
+        if speed > 0:  # Pfeil nur zeichnen, wenn die Zelle zieht
+            direction = self.sl_sf_dir.get()
+            rad_dir = math.radians(direction)
+            
+            # Pfeillänge skalieren (z.B. 100 km/h = voller Radius)
+            arrow_length = (speed / 100.0) * r_deg 
+            
+            # Endpunkt des Hauptvektors
+            end_lat = self.storm_pos[0] + math.cos(rad_dir) * arrow_length
+            end_lon = self.storm_pos[1] + math.sin(rad_dir) * arrow_length * aspect_korrektur
+            
+            # Hauptlinie zeichnen
+            main_line = self.map_widget.set_path(
+                [(self.storm_pos[0], self.storm_pos[1]), (end_lat, end_lon)],
+                color="#0055ff", width=4
+            )
+            self.storm_vector.append(main_line)
+            
+            # Pfeilspitze zeichnen (zwei Linien, abgewinkelt um +/- 150 Grad)
+            tip_length = 0.15 * r_deg  # Größe der Pfeilspitze
+            for angle_offset in [150, -150]:
+                tip_rad = rad_dir + math.radians(angle_offset)
+                tip_lat = end_lat + math.cos(tip_rad) * tip_length
+                tip_lon = end_lon + math.sin(tip_rad) * tip_length * aspect_korrektur
+                
+                tip_line = self.map_widget.set_path(
+                    [(end_lat, end_lon), (tip_lat, tip_lon)],
+                    color="#0055ff", width=4
+                )
+                self.storm_vector.append(tip_line)
 
     def set_receiver(self, coords):
         self.receiver_coords = coords
@@ -206,6 +441,39 @@ class RadioMapApp:
 
         self.lbl_sun = tk.Label(ctrl, font=("Arial", 10)); self.lbl_sun.grid(row=1, column=0, columnspan=2)
 
+        # --- COLLAPSIBLE STORM PANEL ---
+        self.storm_visible = False
+        self.btn_toggle_storm = tk.Button(self.sim_win, text="⛈ Sferics ▼", 
+                                          command=self.toggle_storm_panel, bg="#d5dbdb")
+        self.btn_toggle_storm.pack(fill="x", padx=10, pady=2)
+
+        self.sf_frame = tk.LabelFrame(self.sim_win, text="⛈ Gewitter-Zelle (Simulator)", pady=5, padx=10)
+
+        row1 = tk.Frame(self.sf_frame); row1.pack(fill="x")
+        self.btn_place_storm = tk.Button(row1, command=self.enable_storm_placement, width=18); self.btn_place_storm.pack(side="left", padx=5)
+        self.btn_sferics = tk.Button(row1, command=self.toggle_sferics, width=12, state="disabled"); self.btn_sferics.pack(side="left", padx=5)
+        
+        tk.Label(row1, text="ITU-Profil:").pack(side="left", padx=10)
+        self.storm_profile = ttk.Combobox(row1, values=["Manual", "ITU Weak", "ITU Medium", "ITU Strong"], state="readonly", width=12)
+        self.storm_profile.current(0)
+        self.storm_profile.bind("<<ComboboxSelected>>", self.apply_storm_profile)
+        self.storm_profile.pack(side="left")
+
+        # Richtung/Speed
+        row2 = tk.Frame(self.sf_frame); row2.pack(fill="x", pady=5)
+        self.lbl_sf_dir = tk.Label(row2); self.lbl_sf_dir.pack(side="left", padx=5)
+        self.sl_sf_dir = tk.Scale(row2, from_=0, to=360, orient="horizontal", length=150); self.sl_sf_dir.set(90); self.sl_sf_dir.pack(side="left")
+        self.lbl_sf_spd = tk.Label(row2); self.lbl_sf_spd.pack(side="left", padx=15)
+        self.sl_sf_spd = tk.Scale(row2, from_=0, to=200, orient="horizontal", length=150); self.sl_sf_spd.set(50); self.sl_sf_spd.pack(side="left")
+
+        # Power/Rate
+        row3 = tk.Frame(self.sf_frame); row3.pack(fill="x", pady=5)
+        self.lbl_sf_amp = tk.Label(row3); self.lbl_sf_amp.pack(side="left", padx=5)
+        self.sl_sf_amp = tk.Scale(row3, from_=50, to=5000, orient="horizontal", length=250); self.sl_sf_amp.set(2500); self.sl_sf_amp.pack(side="left")
+        self.lbl_sf_rate = tk.Label(row3); self.lbl_sf_rate.pack(side="left", padx=15)
+        self.sl_sf_rate = tk.Scale(row3, from_=1, to=20, orient="horizontal", length=250); self.sl_sf_rate.set(6); self.sl_sf_rate.pack(side="left")
+
+        # --- LISTEN-BEREICH ---
         list_f = tk.Frame(self.sim_win); list_f.pack(expand=True, fill="both", padx=10)
         self.lbl_pot_title = tk.Label(list_f); self.lbl_pot_title.grid(row=0, column=0)
         self.lbl_cur_title = tk.Label(list_f); self.lbl_cur_title.grid(row=0, column=1)
@@ -218,14 +486,54 @@ class RadioMapApp:
     def toggle_realtime(self):
         self.is_realtime_running = not self.is_realtime_running
         self.change_language(self.cur_lang)
-        if self.is_realtime_running: self.realtime_tick()
+        
+        if self.is_realtime_running:
+            # WICHTIG: Den Anker auf -1 setzen, damit er beim 
+            # nächsten Check sofort die aktuelle Minute als Basis nimmt.
+            self.last_pc_minute = -1
+            self.realtime_tick()
 
     def realtime_tick(self):
         if self.is_realtime_running and self.sim_win.winfo_exists():
-            new_val = (float(self.time_slider.get()) + (1/60)) % 24
-            self.time_slider.set(new_val); self.update_time_label(new_val)
-            self.run_simulation(send_udp=True)
-            self.root.after(60000, self.realtime_tick)
+            now = datetime.now()
+            
+            # PRÜFUNG: Hat die PC-Uhr gerade auf eine neue Minute gewechselt?
+            if now.minute != self.last_pc_minute:
+                # Falls es der allererste Start ist (-1), setzen wir nur den Anker
+                if self.last_pc_minute == -1:
+                    self.last_pc_minute = now.minute
+
+                    # GEWITTER-LEBENSDAUER REDUZIEREN
+                    if self.storm_active:
+                        self.storm_life_minutes -= 1.0
+                        if self.storm_life_minutes <= 0:
+                            self.toggle_sferics() # Schaltet QRN aus und löscht Icons/Pfeile
+                            print("⛈ Gewitter hat sich aufgelöst.")
+
+                    # Optional: Hier sofort einmal rechnen, damit der Start flüssig ist
+                    self.run_simulation(send_udp=True)
+                else:
+                    self.last_pc_minute = now.minute
+                    
+                    # 1. Den aktuellen Stand vom Slider holen (User-Wunschzeit)
+                    current_val = float(self.time_slider.get())
+                    
+                    # 2. Exakt eine Minute (1/60 Stunde) addieren
+                    new_val = (current_val + (1/60)) % 24
+                    
+                    # 3. Slider und Label aktualisieren
+                    # Der Slider "springt" jetzt sauber jede Minute ein Stück weiter
+                    self.time_slider.set(new_val)
+                    self.update_time_label(new_val)
+                    
+                    # 4. Simulation neu berechnen
+                    self.run_simulation(send_udp=True)
+                    
+                    print(f"PC-Uhr Minute gewechselt ({now.minute}) -> Simulation rückt vor.")
+
+            # Wir prüfen häufig (alle 0.5s), damit wir den Moment 
+            # des Umspringens präzise (max. 0.5s Verzögerung) erwischen.
+            self.root.after(500, self.realtime_tick)
 
     def toggle_fastforward(self):
         self.is_fast_running = not self.is_fast_running
@@ -255,13 +563,13 @@ class RadioMapApp:
         if val is not None:
             for freq_hz in range(100000, 1701000, 1000):
                 msg = f"{freq_hz}:{round(val, 6)}"
-                try: self.sock.sendto(msg.encode(), (self.udp_ip, self.udp_port))
+                try: self.sock_gain.sendto(msg.encode(), (self.udp_ip, self.udp_port_gain))
                 except: pass
 
     def set_global_gain_value(self, val):
         for freq_hz in range(100000, 1701000, 1000):
             msg = f"{freq_hz}:{round(float(val), 6)}"
-            try: self.sock.sendto(msg.encode(), (self.udp_ip, self.udp_port))
+            try: self.sock_gain.sendto(msg.encode(), (self.udp_ip, self.udp_port_gain))
             except: pass
 
     def run_simulation(self, send_udp=False):
@@ -380,7 +688,7 @@ class RadioMapApp:
                     # Format: Frequenz in Hz : Linearer Gain (0.0-1.0)
                     msg = f"{int(r['f'] * 1000)}:{round(gain_norm, 6)}"
                     try: 
-                        self.sock.sendto(msg.encode(), (self.udp_ip, self.udp_port))
+                        self.sock_gain.sendto(msg.encode(), (self.udp_ip, self.udp_port_gain))
                     except: 
                         pass
 
