@@ -69,6 +69,9 @@ LANGUAGES = {
     }
 }
 
+
+SFERICS_LIFETIME = 120.0  # Die Zelle lebt 2 Stunden Simulationszeit
+
 class RadioMapApp:
     def __init__(self, root):
         self.root = root
@@ -92,7 +95,7 @@ class RadioMapApp:
         self.storm_active = False
         self.storm_placement_mode = False
         self.storm_pos = [50.0, 10.0]
-        self.storm_life_minutes = 120.0  # Die Zelle lebt 2 Stunde Simulationszeit
+        self.storm_life_minutes = SFERICS_LIFETIME
         self.storm_polygon = None
         self.storm_icons = []
 
@@ -226,6 +229,7 @@ class RadioMapApp:
         if self.storm_active:
             self.storm_icons = []
             self.storm_last_ui_update = 0.0  # Wichtig für Entkopplung
+            self.storm_life_minutes = SFERICS_LIFETIME
             threading.Thread(target=self.storm_engine, daemon=True).start()
         else:
             if self.storm_polygon: 
@@ -503,13 +507,6 @@ class RadioMapApp:
                 if self.last_pc_minute == -1:
                     self.last_pc_minute = now.minute
 
-                    # GEWITTER-LEBENSDAUER REDUZIEREN
-                    if self.storm_active:
-                        self.storm_life_minutes -= 1.0
-                        if self.storm_life_minutes <= 0:
-                            self.toggle_sferics() # Schaltet QRN aus und löscht Icons/Pfeile
-                            print("⛈ Gewitter hat sich aufgelöst.")
-
                     # Optional: Hier sofort einmal rechnen, damit der Start flüssig ist
                     self.run_simulation(send_udp=True)
                 else:
@@ -528,8 +525,16 @@ class RadioMapApp:
                     
                     # 4. Simulation neu berechnen
                     self.run_simulation(send_udp=True)
+
+                    # 5. GEWITTER-LEBENSDAUER REDUZIEREN
+                    if self.storm_active:
+                        self.storm_life_minutes -= 1.0
+                        #print("sferice_active_for: \n",self.storm_life_minutes)
+                        if self.storm_life_minutes <= 0:
+                            self.toggle_sferics() # Schaltet QRN aus und löscht Icons/Pfeile
+                            #print("⛈ Gewitter hat sich aufgelöst.")
                     
-                    print(f"PC-Uhr Minute gewechselt ({now.minute}) -> Simulation rückt vor.")
+                    #print(f"PC-Uhr Minute gewechselt ({now.minute}) -> Simulation rückt vor.")
 
             # Wir prüfen häufig (alle 0.5s), damit wir den Moment 
             # des Umspringens präzise (max. 0.5s Verzögerung) erwischen.
