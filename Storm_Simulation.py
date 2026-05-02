@@ -137,6 +137,13 @@ class StormEngine:
             pts, fill_color="", outline_color="#ff3333", border_width=3
         )
 
+        # --- Live-Daten Text generieren ---
+        spd = self.app.sl_sf_spd.get()
+        hdg = self.app.sl_sf_dir.get()
+        # Lebenszeit runden und verhindern, dass negative Werte aufblinken
+        life = int(max(0, self.storm_life_minutes)) 
+        info_text = f"HDG: {hdg}° | SPD: {spd} km/h | TTL: {life} min"
+
         # 2. Darstellung (PNG vs. Emoji-Fallback)
         inner_r = r_deg * 0.6
         
@@ -156,13 +163,15 @@ class StormEngine:
 
             if not self.storm_icons:
                 icon = self.app.map_widget.set_marker(
-                    draw_pos[0], draw_pos[1], # Zentrierte Position nutzen
-                    text="", image=self.storm_image, 
+                    draw_pos[0], draw_pos[1], 
+                    text=info_text, image=self.storm_image, # Text hier einfügen
+                    font=("Arial", 10, "bold"), text_color="black",
                     marker_color_circle="", marker_color_outside=""
                 )
                 self.storm_icons.append(icon)
             else:
                 self.storm_icons[0].set_position(draw_pos[0], draw_pos[1])
+                self.storm_icons[0].set_text(info_text) # Text dynamisch aktualisieren!
         
         else:
             # --- MODUS B: EMOJI-FALLBACK ---
@@ -176,10 +185,14 @@ class StormEngine:
 
             if not self.storm_icons:
                 for i, (o_lat, o_lon) in enumerate(offsets):
+                    # Den Infotext nur an das mittlere (erste) Emoji hängen
+                    marker_text = symbols[i % len(symbols)]
+                    if i == 0: marker_text += f"\n{info_text}"
+
                     icon = self.app.map_widget.set_marker(
                         self.storm_pos[0] + o_lat * inner_r, 
                         self.storm_pos[1] + o_lon * inner_r * aspect_korrektur,
-                        text=symbols[i % len(symbols)], font=("Arial", 20, "bold"), 
+                        text=marker_text, font=("Arial", 12, "bold"), 
                         marker_color_circle="#ffcc00", marker_color_outside="#ffcc00"
                     )
                     self.storm_icons.append(icon)
@@ -189,6 +202,9 @@ class StormEngine:
                         self.storm_pos[0] + o_lat * inner_r, 
                         self.storm_pos[1] + o_lon * inner_r * aspect_korrektur
                     )
+                    # Beim Aktualisieren der Position auch den Text erneuern
+                    if i == 0:
+                        self.storm_icons[i].set_text(symbols[0] + f"\n{info_text}")
 
         # 3. Zugrichtung (Bleibt gleich)
         for line in self.storm_vector: line.delete()
