@@ -32,7 +32,7 @@ Upon startup, the program searches this folder for new transmitter definitions a
 These coordinates are automatically cached in an SQL database for immediate availability upon the next program start. Transmitter and receiver locations are displayed using a TkinterMapView.
 
 
-Since the AMWaveSynth also allows the firing of sferics at RF level, it is possible to define a thunderstorm zone on the map with direction of movement, speed of movement and intensity. The intensity of the simulated disturbances is influenced by the distance of the thunderstorm zone from the receiver's location. Since the thunderstorm zone moves across the map during its lifetime, this affects the listening experience on the radio.
+Since the AMWaveSynth also allows the firing of sferics at RF level, it is possible to define a thunderstorm area/storm cell on the map with heading, ground speed and intensity. The intensity of the simulated disturbances is influenced by the distance of the storm cell from the receiver's location. Since the storm moves across the map during its lifetime, this affects the listening experience on the radio.
 
 ![SFERICS](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/www/sferics.jpg "sferics")
 We plan to further expand these features in later versions if needed and desired.
@@ -61,7 +61,7 @@ We plan to further expand these features in later versions if needed and desired
 
 - start application
   
-`python3.13 AMWaveSyntPropagationSIM.py`
+`python3.13 AMWaveSynthPropagationSIM.py`
 
 in one go, simply
 
