@@ -224,7 +224,7 @@ class RadioMapApp:
 
         # Neues Fenster erstellen, aber sofort verstecken
         self.storm_win = tk.Toplevel(self.root)
-        self.storm_win.geometry("600x150")
+        self.storm_win.geometry("600x180")
         self.storm_win.resizable(False, False)
         # Wenn der User auf das 'X' drückt, wird das Fenster nur versteckt, nicht zerstört!
         self.storm_win.protocol("WM_DELETE_WINDOW", self.toggle_storm_panel)
