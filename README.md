@@ -77,6 +77,6 @@ source .venv/bin/activate
 uv init
 uv add -r requirements.txt
 source .venv/bin/activate
-python3.13 AMWaveSyntPropagationSIM.py
+python3.13 AMWaveSynthPropagationSIM.py
 
 ```
