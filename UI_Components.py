@@ -100,6 +100,21 @@ class RadioMapApp:
         # 2. Karten-Widget Setup
         self.map_widget = TkinterMapView(self.root, width=1200, height=900)
         self.map_widget.pack(fill="both", expand=True)
+        # --- FIXIERTER BLITZ-BUTTON UNTEN LINKS IN MAP_WND---
+        self.btn_map_sferics = tk.Button(
+            self.map_widget, 
+            text="⚡", 
+            font=("Arial", 20, "bold"),
+            bg="#f0f0f0",
+            fg="orange",
+            width=2,
+            height=1,
+            relief="raised",
+            command=self.toggle_storm_panel # Öffnet das neue Kindfenster
+        )
+        # Positionierung: 20 Pixel vom linken Rand, 20 Pixel vom unteren Rand
+        self.btn_map_sferics.place(relx=0, rely=1.0, x=20, y=-20, anchor="sw")
+
         self.receiver_coords = (52.52, 13.40); self.receiver_marker = None
         self.map_widget.set_position(52.52, 13.40); self.map_widget.set_zoom(5)
         self.map_widget.add_left_click_map_command(self.storm_engine.place_storm_callback)
@@ -122,6 +137,12 @@ class RadioMapApp:
         self.mod_menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(menu=self.mod_menu)
         self.root.config(menu=self.menubar)
+
+    def update_sferics_button_color(self):
+        if hasattr(self, 'storm_engine') and self.storm_engine.storm_active:
+            self.btn_map_sferics.config(bg="yellow", fg="red")
+        else:
+            self.btn_map_sferics.config(bg="#f0f0f0", fg="orange")
 
     def change_language(self, code):
         self.cur_lang = code
@@ -219,8 +240,8 @@ class RadioMapApp:
         self.lbl_sun = tk.Label(ctrl, font=("Arial", 10)); self.lbl_sun.grid(row=1, column=0, columnspan=2)
 
         # --- EIGENES KIND-FENSTER FÜR STORM PANEL ---
-        self.btn_toggle_storm = tk.Button(self.sim_win, text="⛈ Sferics Fenster öffnen", command=self.toggle_storm_panel, bg="#d5dbdb")
-        self.btn_toggle_storm.pack(fill="x", padx=10, pady=2)
+        #self.btn_toggle_storm = tk.Button(self.sim_win, text="⛈ Sferics Fenster öffnen", command=self.toggle_storm_panel, bg="#d5dbdb")
+        #self.btn_toggle_storm.pack(fill="x", padx=10, pady=2)
 
         # Neues Fenster erstellen, aber sofort verstecken
         self.storm_win = tk.Toplevel(self.root)
@@ -322,14 +343,25 @@ class RadioMapApp:
 
     def toggle_storm_panel(self):
         """Öffnet oder versteckt das Gewitter-Kindfenster."""
+        # Sicherheitscheck, falls das Fenster noch nicht existiert
+        if not hasattr(self, 'storm_win'):
+            return
+
         # Prüfen, ob das Fenster aktuell versteckt ist
         if self.storm_win.state() == "withdrawn":
             self.storm_win.deiconify()  # Fenster einblenden
             self.storm_win.lift()       # In den Vordergrund holen
-            self.btn_toggle_storm.config(text="⛈ Sferics Fenster schließen")
+            
+            # Button auf der Karte optisch ändern, wenn das Fenster offen ist:
+            self.btn_map_sferics.config(relief="sunken", bg="#d5dbdb")
         else:
             self.storm_win.withdraw()   # Fenster verstecken
-            self.btn_toggle_storm.config(text="⛈ Sferics Fenster öffnen")
+            
+            # Button wieder in normalen Zustand versetzen
+            self.btn_map_sferics.config(relief="raised", bg="#f0f0f0")
+            
+            # WICHTIG: Falls ein Gewitter läuft, soll die Farbe erhalten bleiben
+            self.update_sferics_button_color()
 
     def set_global_gain_dialog(self):
         v = simpledialog.askfloat("Gain", "0.0 - 1.0:", minvalue=0.0, maxvalue=1.0, parent=self.root)
