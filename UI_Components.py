@@ -138,6 +138,9 @@ class RadioMapApp:
         self.lbl_sf_spd.config(text=T["sf_spd"]); self.lbl_sf_amp.config(text=T["sf_amp"])
         self.lbl_sf_rate.config(text=T["sf_rate"])
 
+        if hasattr(self, 'storm_win'):
+            self.storm_win.title(T["sf_title"])
+
         if not self.storm_engine.storm_placement_mode:
             self.btn_place_storm.config(text=T["sf_place"])
 
@@ -215,11 +218,21 @@ class RadioMapApp:
 
         self.lbl_sun = tk.Label(ctrl, font=("Arial", 10)); self.lbl_sun.grid(row=1, column=0, columnspan=2)
 
-        # --- COLLAPSIBLE STORM PANEL ---
-        self.btn_toggle_storm = tk.Button(self.sim_win, text="⛈ Sferics ▼", command=self.toggle_storm_panel, bg="#d5dbdb");
+        # --- EIGENES KIND-FENSTER FÜR STORM PANEL ---
+        self.btn_toggle_storm = tk.Button(self.sim_win, text="⛈ Sferics Fenster öffnen", command=self.toggle_storm_panel, bg="#d5dbdb")
         self.btn_toggle_storm.pack(fill="x", padx=10, pady=2)
 
-        self.sf_frame = tk.LabelFrame(self.sim_win, pady=5, padx=10)
+        # Neues Fenster erstellen, aber sofort verstecken
+        self.storm_win = tk.Toplevel(self.root)
+        self.storm_win.geometry("600x150")
+        self.storm_win.resizable(False, False)
+        # Wenn der User auf das 'X' drückt, wird das Fenster nur versteckt, nicht zerstört!
+        self.storm_win.protocol("WM_DELETE_WINDOW", self.toggle_storm_panel)
+        self.storm_win.withdraw() 
+
+        # sf_frame nutzt jetzt storm_win als Parent anstatt sim_win
+        self.sf_frame = tk.LabelFrame(self.storm_win, pady=5, padx=10)
+        self.sf_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         r1 = tk.Frame(self.sf_frame); r1.pack(fill="x")
         self.btn_place_storm = tk.Button(r1, command=self.storm_engine.enable_storm_placement, width=18); self.btn_place_storm.pack(side="left")
@@ -227,8 +240,7 @@ class RadioMapApp:
         tk.Label(r1, text="ITU-Profil:").pack(side="left")
         self.storm_profile = ttk.Combobox(r1, values=["Manual", "ITU Weak", "ITU Medium", "ITU Strong"], state="readonly", width=10); 
         self.storm_profile.current(0);
-        self.storm_profile.bind("<<ComboboxSelected>>", 
-        self.apply_storm_profile); self.storm_profile.pack(side="left")
+        self.storm_profile.bind("<<ComboboxSelected>>", self.apply_storm_profile); self.storm_profile.pack(side="left")
 
         # Richtung/Speed
         r2 = tk.Frame(self.sf_frame); r2.pack(fill="x")
@@ -309,14 +321,15 @@ class RadioMapApp:
         v = float(val); self.lbl_time_val.config(text=f"{int(v):02d}:{int((v*60)%60):02d}")
 
     def toggle_storm_panel(self):
-        """Klappt das Gewitter-Panel auf oder zu."""
-        if getattr(self, 'storm_vis', False): 
-            self.sf_frame.pack_forget();
-            self.btn_toggle_storm.config(text="⛈ Sferics ▼")
-        else: 
-            self.sf_frame.pack(fill="x", padx=10, pady=5, after=self.btn_toggle_storm);
-            self.btn_toggle_storm.config(text="Sferics ▲ ")
-        self.storm_vis = not getattr(self, 'storm_vis', False)
+        """Öffnet oder versteckt das Gewitter-Kindfenster."""
+        # Prüfen, ob das Fenster aktuell versteckt ist
+        if self.storm_win.state() == "withdrawn":
+            self.storm_win.deiconify()  # Fenster einblenden
+            self.storm_win.lift()       # In den Vordergrund holen
+            self.btn_toggle_storm.config(text="⛈ Sferics Fenster schließen")
+        else:
+            self.storm_win.withdraw()   # Fenster verstecken
+            self.btn_toggle_storm.config(text="⛈ Sferics Fenster öffnen")
 
     def set_global_gain_dialog(self):
         v = simpledialog.askfloat("Gain", "0.0 - 1.0:", minvalue=0.0, maxvalue=1.0, parent=self.root)
