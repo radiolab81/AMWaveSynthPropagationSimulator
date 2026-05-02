@@ -235,7 +235,7 @@ class RadioMapApp:
         self.lbl_sf_dir = tk.Label(r2); self.lbl_sf_dir.pack(side="left")
         self.sl_sf_dir = tk.Scale(r2, from_=0, to=360, orient="horizontal", length=150); self.sl_sf_dir.set(90); self.sl_sf_dir.pack(side="left")
         self.lbl_sf_spd = tk.Label(r2); self.lbl_sf_spd.pack(side="left")
-        self.sl_sf_spd = tk.Scale(r2, from_=0, to=200, orient="horizontal", length=150); self.sl_sf_spd.set(50); self.sl_sf_spd.pack(side="left")
+        self.sl_sf_spd = tk.Scale(r2, from_=0, to=100, orient="horizontal", length=150); self.sl_sf_spd.set(50); self.sl_sf_spd.pack(side="left")
 
         # Power/Rate
         r3 = tk.Frame(self.sf_frame); r3.pack(fill="x")
