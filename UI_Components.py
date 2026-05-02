@@ -176,6 +176,7 @@ class RadioMapApp:
 
     def open_simulation_window(self):
         self.sim_win = tk.Toplevel(self.root);
+        self.sim_win.protocol("WM_DELETE_WINDOW", lambda: None)
         self.sim_win.geometry("1050x800")
 
         ctrl = tk.Frame(self.sim_win, pady=10); ctrl.pack(fill="x")
