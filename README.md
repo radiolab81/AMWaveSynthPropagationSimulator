@@ -41,6 +41,8 @@ Upcoming features:
 
 - Whether traveling through Europe, visiting distant exotic lands, or driving along the legendary Route 66 — from now on, the radio landscape will drift past your radio just as it did back when you were actually on that route.
 see: https://github.com/radiolab81/AMWaveSynthPropagationSimulator/tree/main/plugins/MovableRXLocationPlayer
+
+![MRXLP](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/www/mrxlp.jpg "virtual car radio travel")
  
 - more to come
 
