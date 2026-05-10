@@ -6,7 +6,11 @@ The MovableRXLocationPlayer is a tool for the simulated playback of GPS files (.
 
 This allows the receiver position within the propagation simulation to be elegantly shifted in real time—enabling, for instance, the simulation of past holiday road trips, while the radio landscape changes on the "car radio" sitting on the desk.
 
+
 ![UI2](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/plugins/MovableRXLocationPlayer/www/mrxlpl_ui2.jpg "")
 
+
 ![UI3](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/plugins/MovableRXLocationPlayer/www/mrxlpl_ui3.jpg "")
+
+
 Whether it’s journeys through Europe, distant exotic lands, or a drive along the legendary Route 66—from now on, the radio landscape will drift past your radio just as it did back when you were traveling along that very route.  Naturally, this takes into account the time of day and season, as well as any simulated thunderstorms along the way.
