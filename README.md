@@ -37,6 +37,13 @@ Since the AMWaveSynth also allows the firing of sferics at RF level, it is possi
 ![SFERICS](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/www/sferics.jpg "sferics")
 We plan to further expand these features in later versions if needed and desired.
 
+Upcoming features: 
+
+- Whether traveling through Europe, visiting distant exotic lands, or driving along the legendary Route 66—from now on, the radio landscape will drift past your radio just as it did back when you were actually on that route.
+see: https://github.com/radiolab81/AMWaveSynthPropagationSimulator/tree/main/plugins/MovableRXLocationPlayer
+ 
+- more to come
+
 ### Installation (can be done by uv paket manager)
 - checkout AMWaveSynthPropagationSimulator
 - get uv
