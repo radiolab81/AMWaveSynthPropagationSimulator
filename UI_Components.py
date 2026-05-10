@@ -88,6 +88,10 @@ class RadioMapApp:
         self.sock_gain = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock_sferics = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+        # GPS Empfang / new RX Location over UDP 8886
+        self.gps_udp_port = 8886
+        threading.Thread(target=self.udp_gps_listener, daemon=True).start()
+
         self.is_realtime_running = False; self.is_fast_running = False; self.last_pc_minute = -1
 
         # 1. Datenbank & Geocoder Initialisierung
@@ -123,6 +127,26 @@ class RadioMapApp:
         self.open_simulation_window()
         self.load_all_from_folder("tx_sites")
         self.change_language("DE")
+
+    def udp_gps_listener(self):
+        """Lauscht auf Port 8886 auf Koordinaten vom Navi."""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((self.udp_ip, self.gps_udp_port))
+        
+        while True:
+            try:
+                data, _ = sock.recvfrom(1024)
+                # Format: "lat,lon" (z.B. "50.5200,11.4000")
+                coords_str = data.decode('utf-8').strip().split(',')
+                if len(coords_str) == 2:
+                    lat = float(coords_str[0])
+                    lon = float(coords_str[1])
+                    
+                    # Update an den Haupt-Thread übergeben
+                    self.root.after_idle(self.set_receiver, (lat, lon))
+            except:
+                pass
+
 
     def setup_menu(self):
         self.menubar = tk.Menu(self.root)
@@ -194,8 +218,15 @@ class RadioMapApp:
 
     def set_receiver(self, coords):
         self.receiver_coords = coords
-        if self.receiver_marker: self.receiver_marker.delete()
-        self.receiver_marker = self.map_widget.set_marker(*coords, text=LANGUAGES[self.cur_lang]["rec_marker"], marker_color_outside="blue")
+        #if self.receiver_marker: self.receiver_marker.delete() 
+        if self.receiver_marker is None:
+            self.receiver_marker = self.map_widget.set_marker(
+                *coords, 
+                text=self.LANGUAGES[self.cur_lang]["rec_marker"], 
+                marker_color_outside="blue"
+            )
+        self.receiver_marker.set_position(*coords)
+        self.map_widget.set_position(*coords)
         self.run_simulation()
 
     def open_simulation_window(self):
