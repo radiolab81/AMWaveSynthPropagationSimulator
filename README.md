@@ -75,7 +75,7 @@ in one go, simply
 ```console
 #!/bin/bash
 sudo apt update
-sudo apt install build-essential cmake git python3-tk
+sudo apt install build-essential cmake git python3-tk python3-gpxpy python3-geopy
 git clone https://github.com/radiolab81/AMWaveSynthPropagationSimulator
 sudo curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/usr/local/bin" INSTALLER_NO_MODIFY_PATH=1 sudo -E sh
 cd AMWaveSynthPropagationSimulator
