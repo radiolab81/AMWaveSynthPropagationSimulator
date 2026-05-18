@@ -9,6 +9,10 @@ from geopy.geocoders import ArcGIS
 from Propagation_Engine import PropagationEngine
 from Storm_Simulation import StormEngine
 
+# Import der RX-Antennencharakteristik
+from tkinter import filedialog
+from Antenna_Engine import AntennaEngine
+
 # --- LOKALISIERUNGSDATEN (Inkl. Gewitter-Erweiterungen) ---
 LANGUAGES = {
     "DE": {
@@ -21,7 +25,8 @@ LANGUAGES = {
         "mod_menu": "Modulator", "mod_off": "Alle AUS (0.0)", "mod_max": "Alle MAX (1.0)", "mod_custom": "Gain Wert setzen...",
         "sf_title": "⛈ Gewitter-Zelle", "sf_place": "⛈ Gewitter setzen", "sf_click": "👉 Klick in Karte...",
         "sf_on": "QRN Start", "sf_off": "QRN Stop", "sf_dir": "Richtung (°):", "sf_spd": "Speed (km/h):",
-        "sf_amp": "Basis-Power:", "sf_rate": "Häufigkeit:"
+        "sf_amp": "Basis-Power:", "sf_rate": "Häufigkeit:",
+        "rx_ant_load" : "📡 Antenne laden...", "rx_ant_type" : "Rundstrahler (Omni)", "rx_ant_dir" : "Ausrichtung RX-Antenne:"
     },
     "EN": {
         "title": "HF Modulator Propagation Simulator Control (UDP 8888)",
@@ -33,7 +38,8 @@ LANGUAGES = {
         "mod_menu": "Modulator", "mod_off": "All OFF (0.0)", "mod_max": "All MAX (1.0)", "mod_custom": "Set Gain Value...",
         "sf_title": "⛈ Storm Cell", "sf_place": "⛈ Place Storm", "sf_click": "👉 Click Map...",
         "sf_on": "QRN Start", "sf_off": "QRN Stop", "sf_dir": "Dir (°):", "sf_spd": "Speed (km/h):",
-        "sf_amp": "Base Power:", "sf_rate": "Frequency:"
+        "sf_amp": "Base Power:", "sf_rate": "Frequency:",
+        "rx_ant_load" : "📡 Load RX Antenna ...", "rx_ant_type" : "Omnidirectional (Omni)", "rx_ant_dir" : "RX Antenna Alignment:"
     },
     "FR": {
         "title": "Simulateur de propagation HF (UDP 8888)",
@@ -45,7 +51,9 @@ LANGUAGES = {
         "mod_menu": "Modulateur", "mod_off": "Tous OFF (0.0)", "mod_max": "Tous MAX (1.0)", "mod_custom": "Régler le Gain...",
         "sf_title": "⛈ Orage", "sf_place": "⛈ Placer l'orage", "sf_click": "👉 Cliquer sur carte",
         "sf_on": "Démarrer QRN", "sf_off": "Arrêter QRN", "sf_dir": "Dir (°):", "sf_spd": "Vitesse (km/h):",
-        "sf_amp": "Puissance:", "sf_rate": "Fréquence:"
+        "sf_amp": "Puissance:", "sf_rate": "Fréquence:",
+        "rx_ant_load" : "📡 Charger l'antenne RX...", "rx_ant_type" : "Omnidirectionnelle (Omni)", "rx_ant_dir" : "Alignement de l'antenne RX :"
+
     },
     "IT": {
         "title": "Simulatore di propagazione HF (UDP 8888)",
@@ -57,7 +65,9 @@ LANGUAGES = {
         "mod_menu": "Modulatore", "mod_off": "Tutto OFF (0.0)", "mod_max": "Tutto MAX (1.0)", "mod_custom": "Imposta Gain...",
         "sf_title": "⛈ Temporale", "sf_place": "⛈ Piazza temporale", "sf_click": "👉 Clicca sulla mappa",
         "sf_on": "Avvia QRN", "sf_off": "Ferma QRN", "sf_dir": "Dir (°):", "sf_spd": "Velocità:",
-        "sf_amp": "Potenza:", "sf_rate": "Frequenza:"
+        "sf_amp": "Potenza:", "sf_rate": "Frequenza:",
+        "rx_ant_load" : "📡 Carica antenna RX...", "rx_ant_type" : "Omnidirezionale (Omni)", "rx_ant_dir" : "Allineamento antenna RX :"
+
     },
     "JP": {
         "title": "HFモジュレーター伝搬シミュレーター (UDP 8888)",
@@ -69,7 +79,9 @@ LANGUAGES = {
         "mod_menu": "変調器", "mod_off": "全オフ (0.0)", "mod_max": "全最大 (1.0)", "mod_custom": "ゲイン値を設定...",
         "sf_title": "⛈ 雷雨セル", "sf_place": "⛈ 雷雨を配置", "sf_click": "👉 地図をクリック...",
         "sf_on": "QRN 開始", "sf_off": "QRN 停止", "sf_dir": "方向 (°):", "sf_spd": "速度 (km/h):",
-        "sf_amp": "基本電力:", "sf_rate": "頻度:"
+        "sf_amp": "基本電力:", "sf_rate": "頻度:",
+        "rx_ant_load" : "📡 RXアンテナを読み込む...", "rx_ant_type" : "無指向性 (オムニ)", "rx_ant_dir" : "RXアンテナ方向:"
+
     }
 }
 
@@ -82,6 +94,7 @@ class RadioMapApp:
         # Engines initialisieren
         self.prop_engine = PropagationEngine(self)
         self.storm_engine = StormEngine(self)
+        self.antenna_engine = AntennaEngine(self)
 
         # UDP Setup für externen Modulator (Gain & Sferics Split)
         self.udp_ip = "127.0.0.1"; self.udp_port_gain = 8888; self.udp_port_sferics = 8889
@@ -191,6 +204,17 @@ class RadioMapApp:
 
         self.btn_sferics.config(text=T["sf_off"] if self.storm_engine.storm_active else T["sf_on"])
 
+        # Antennencharakteristik
+        self.btn_load_ant.config(text=T["rx_ant_load"])
+        self.lbl_ant_dir.config(text=T["rx_ant_dir"])
+
+        # Prüfen: Ist der Clear-Button deaktiviert? Dann ist KEINE Antenne geladen.
+        if str(self.btn_clear_ant["state"]) == "disabled":
+            self.lbl_ant_status.config(text=T["rx_ant_type"], fg="grey")
+        else:
+            # Falls doch, behalten wir zwingend den blau geschriebenen Dateinamen!
+            if hasattr(self, 'antenna_engine') and hasattr(self.antenna_engine, 'filename'):
+                self.lbl_ant_status.config(text=self.antenna_engine.filename, fg="blue")
         # Button-Texte
         self.btn_fast.config(text=T["fast_stop"] if self.is_fast_running else T["fast"])
         self.btn_realtime.config(text=T["real_stop"] if self.is_realtime_running else T["real"])
@@ -269,6 +293,24 @@ class RadioMapApp:
         self.sens_slider.bind("<ButtonRelease-1>", lambda e: self.run_simulation())
 
         self.lbl_sun = tk.Label(ctrl, font=("Arial", 10)); self.lbl_sun.grid(row=1, column=0, columnspan=2)
+
+        # --- ANTENNEN STEUERUNG (Row 2) ---
+        # Wir trennen Spalte 0 und 1 für den Lade- und Löschbutton auf
+        self.btn_load_ant = tk.Button(ctrl, text="📡 Antenne laden...", command=self.load_antenna_dialog, width=25)
+        self.btn_load_ant.grid(row=2, column=0, pady=5, padx=10, sticky="ew")
+
+        self.btn_clear_ant = tk.Button(ctrl, text="❌", command=self.clear_antenna, state="disabled", width=3, fg="red")
+        self.btn_clear_ant.grid(row=2, column=1, pady=5, padx=2)
+
+        self.lbl_ant_status = tk.Label(ctrl, text="Rundstrahler (Omni)", fg="grey")
+        self.lbl_ant_status.grid(row=2, column=2, columnspan=2, sticky="w", padx=5)
+
+        self.lbl_ant_dir = tk.Label(ctrl, text="Ausrichtung RX-Antenne:")
+        self.lbl_ant_dir.grid(row=2, column=4, sticky="e")
+
+        self.sl_ant_dir = tk.Scale(ctrl, from_=0, to=359, orient="horizontal", length=200, state="disabled", command=self.update_antenna_heading)
+        self.sl_ant_dir.set(0)
+        self.sl_ant_dir.grid(row=2, column=5, columnspan=2)
 
         # --- EIGENES KIND-FENSTER FÜR STORM PANEL ---
         #self.btn_toggle_storm = tk.Button(self.sim_win, text="⛈ Sferics Fenster öffnen", command=self.toggle_storm_panel, bg="#d5dbdb")
@@ -393,6 +435,46 @@ class RadioMapApp:
             
             # WICHTIG: Falls ein Gewitter läuft, soll die Farbe erhalten bleiben
             self.update_sferics_button_color()
+
+    def load_antenna_dialog(self):
+        filepath = filedialog.askopenfilename(
+            title="Antennendatei wählen",
+            filetypes=(("Antenna Files", "*.msi *.ant"),),
+            parent=self.sim_win
+        )
+        if filepath:
+            if self.antenna_engine.load_file(filepath):
+                self.lbl_ant_status.config(text=f"{self.antenna_engine.filename}", fg="blue")
+                self.sl_ant_dir.config(state="normal")
+                self.btn_clear_ant.config(state="normal") # <-- Aktiviert den X-Button
+                # RECHNERISCH + VISUELL AKTUALISIEREN
+                self.antenna_engine.update_visuals() 
+                self.run_simulation(True)
+
+    def update_antenna_heading(self, val):
+        if hasattr(self, 'antenna_engine'):
+            self.antenna_engine.antenna_heading = float(val)
+            # send_udp=True (bzw. True) sorgt dafür, dass bei JEDEM 
+            # Zucken des Sliders die Daten berechnet und direkt per UDP verschickt werden!
+            # RECHNERISCH + VISUELL LIVE IN DER MAP ROTIEREN BEIM SLIDEN
+            self.antenna_engine.update_visuals()
+            self.run_simulation(True)
+
+    def clear_antenna(self):
+        """Verwirft das Diagramm, setzt die UI zurück und funkt den Omni-Status an den Modulator."""
+        if hasattr(self, 'antenna_engine'):
+            # 1. Engine zurücksetzen
+            self.antenna_engine.reset()
+            
+            # 2. UI-Elemente zurücksetzen und sperren
+            current_omni_text = self.LANGUAGES[self.cur_lang]["rx_ant_type"]
+            self.lbl_ant_status.config(text=current_omni_text, fg="grey")
+            self.sl_ant_dir.set(0)
+            self.sl_ant_dir.config(state="disabled")
+            self.btn_clear_ant.config(state="disabled") # <-- Deaktiviert sich selbst
+            
+            # 3. SOFORTIGE NEUBERECHNUNG UND LIVE-VERSAND ÜBER UDP
+            self.run_simulation(True)
 
     def set_global_gain_dialog(self):
         v = simpledialog.askfloat("Gain", "0.0 - 1.0:", minvalue=0.0, maxvalue=1.0, parent=self.root)

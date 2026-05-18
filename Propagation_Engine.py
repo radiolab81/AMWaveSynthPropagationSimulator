@@ -5,6 +5,7 @@ class PropagationEngine:
     def __init__(self, app):
         self.app = app
         self.c = 299.792  # Lichtgeschwindigkeit in km/ms
+        self.last_active_stations = set()
 
     def get_sun_alt(self, lat, lon, n_day, time_h):
         decl = 23.45 * math.sin(math.radians(360 / 365 * (n_day - 81)))
@@ -91,6 +92,14 @@ class PropagationEngine:
                 # Absorption steigt quadratisch mit sinkender Frequenz (1/f^2)
                 sky_loss = sun_f * 85 * ((1000 / f) ** 2)
                 cur_sky = sky_base - sky_loss
+
+                # --- ANTENNEN-RICHTCHARAKTERISTIK ---
+                # Berechnet die Dämpfung basierend auf Azimut und Antennendrehung
+                ant_loss = self.app.antenna_engine.get_attenuation(u_lat, u_lon, m_lat, m_lon)
+                # Die berechnete Dämpfung (ist negativ oder 0) wird addiert (= abgezogen)
+                fs_g += ant_loss
+                sky_base += ant_loss
+                cur_sky += ant_loss
                 
                 # --- LAUFZEITEN (Delays) ---
                 t_bw = dist / (self.c * 0.997) # Bodenwelle (leicht verzögert durch Erdnähe)
@@ -112,6 +121,10 @@ class PropagationEngine:
         
         # 2. Aktuelle Empfangsliste (Was ist JETZT hörbar?)
         res_list.sort(key=lambda x: x["now"], reverse=True)
+
+        # Set für diesen Durchlauf vorbereiten
+        now_active_stations = set()
+
         for r in res_list:
             if r['now'] > sens:
                 # Modus-Erkennung: Welcher Pfad dominiert oder gibt es Interferenz (Fading)?
@@ -123,11 +136,35 @@ class PropagationEngine:
                 
                 # --- UDP-VERSAND AN MODULATOR ---
                 if send_udp:
+                    freq_hz = int(r['f'] * 1000)
+                    now_active_stations.add(freq_hz)  # Im aktuellen Durchlauf als aktiv registrieren
+                    
                     # Dynamik: 40 dB Fenster oberhalb der eingestellten Schwelle
                     gain_norm = max(0.0, min(1.0, (r['now'] - sens) / 40.0))
                     # Format: Frequenz in Hz : Linearer Gain (0.0-1.0)
-                    msg = f"{int(r['f'] * 1000)}:{round(gain_norm, 6)}"
+                    msg = f"{freq_hz}:{round(gain_norm, 6)}"
                     try: 
                         self.app.sock_gain.sendto(msg.encode(), (self.app.udp_ip, self.app.udp_port_gain))
                     except: 
                         pass
+
+        # --- AUFRÄUMEN --- EFFIZIENTER GEDÄCHTNIS-RESET (ERSETZT DAS GANZE BAND ZU NULLEN) ---
+        if send_udp:
+            # Welche Frequenzen waren LETZTES MAL aktiv, sind es JETZT aber nicht mehr?
+            droped_stations = self.last_active_stations - now_active_stations
+
+            # NUR für diese stumm gewordenen Sender schicken wir exakt EINMAL 0.0!
+            for f_hz in droped_stations:
+                try: 
+                    self.app.sock_gain.sendto(f"{f_hz}:0.0".encode(), (self.app.udp_ip, self.app.udp_port_gain))
+                except: 
+                    pass
+
+            # Das Gedächtnis für den nächsten Schritt aktualisieren
+            self.last_active_stations = now_active_stations
+
+
+        # Aktualisiert das optische Antennen-Polygon, falls eine Richtcharakteristik aktiv ist
+        if hasattr(self.app, 'antenna_engine'):
+            self.app.antenna_engine.update_visuals()
+
