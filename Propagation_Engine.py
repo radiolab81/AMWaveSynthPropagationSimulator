@@ -97,7 +97,18 @@ class PropagationEngine:
                 # Berechnet die Dämpfung basierend auf Azimut und Antennendrehung
                 ant_loss = self.app.antenna_engine.get_attenuation(u_lat, u_lon, m_lat, m_lon)
                 # Die berechnete Dämpfung (ist negativ oder 0) wird addiert (= abgezogen)
+
+                # 1. Bodenwelle trifft immer flach (100% Dämpfung)
                 fs_g += ant_loss
+
+                # 2. Raumwelle: Richtwirkung nimmt bei kurzen Distanzen (steiler Einfall) ab
+                # Errechnet einen Faktor zwischen 0.0 (nah) und 1.0 (weit ab ca. 800km)
+                sky_factor = min(1.0, max(0.0, dist / 800.0))
+                    
+                # Wenn sky_factor z.B. 0.5 ist, wirkt bei einer Dämpfung von -40dB 
+                # auf die Raumwelle nur noch -20dB.
+                sky_ant_loss = ant_loss * sky_factor
+
                 sky_base += ant_loss
                 cur_sky += ant_loss
                 
