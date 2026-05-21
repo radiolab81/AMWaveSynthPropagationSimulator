@@ -213,7 +213,7 @@ class RadioMapApp:
     def udp_gps_listener(self):
         """Lauscht auf Port 8886 auf Koordinaten vom Navi."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind((self.udp_ip, self.gps_udp_port))
+        sock.bind(("0.0.0.0", self.gps_udp_port))
         
         while True:
             try:
