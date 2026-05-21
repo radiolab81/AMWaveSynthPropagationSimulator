@@ -77,12 +77,15 @@ Create tactical field exercises straight from the cockpit of your PC.
 Because the propagation engine modulates the **actual physical amplitude** via the connected SDR/RF modulator pipe, you can connect an authentic vintage communication receiver or a physical airborne ADF avionics unit directly to the RF output. The physical S-meter will drop, the audio will dip right into the noise floor as you hit an antenna null, and the hardware AGC loop will react natively to the calculated environmental physics.
 
 
-### 🚀 Upcoming features: 
+### 🚀 MovableRXLocationPlayer: 
+
+
+![MRXLP0](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/plugins/MovableRXLocationPlayer/www/mrxlpl_ui1.jpg "virtual car radio travel")
 
 - Whether traveling through Europe, visiting distant exotic lands, or driving along the legendary Route 66 — from now on, the radio landscape will drift past your radio just as it did back when you were actually on that route.
 see: https://github.com/radiolab81/AMWaveSynthPropagationSimulator/tree/main/plugins/MovableRXLocationPlayer
 
-![MRXLP](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/www/mrxlp.jpg "virtual car radio travel")
+![MRXLP1](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/www/mrxlp.jpg "virtual car radio travel")
  
 - more to come
 
