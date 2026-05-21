@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, simpledialog
-import os, glob, csv, sqlite3, time, socket, threading, random
+import os, glob, csv, sqlite3, time, socket, threading, random, json
 from datetime import datetime
 from tkintermapview import TkinterMapView
 from geopy.geocoders import ArcGIS
@@ -26,7 +26,9 @@ LANGUAGES = {
         "sf_title": "⛈ Gewitter-Zelle", "sf_place": "⛈ Gewitter setzen", "sf_click": "👉 Klick in Karte...",
         "sf_on": "QRN Start", "sf_off": "QRN Stop", "sf_dir": "Richtung (°):", "sf_spd": "Speed (km/h):",
         "sf_amp": "Basis-Power:", "sf_rate": "Häufigkeit:",
-        "rx_ant_load" : "📡 Antenne laden...", "rx_ant_type" : "Rundstrahler (Omni)", "rx_ant_dir" : "Ausrichtung RX-Antenne:"
+        "rx_ant_load" : "📡 Antenne laden...", "rx_ant_type" : "Rundstrahler (Omni)", "rx_ant_dir" : "Ausrichtung RX-Antenne:",
+        "net_menu": "Netzwerk", "net_change_ip": "Ziel-IP ändern...", "net_dlg_title": "Netzwerk Einstellungen",
+        "net_dlg_prompt": "Geben Sie die Ziel-IP-Adresse des Modulators ein:\n(Aktuell: {})", "net_err_title": "Fehler", "net_err_msg": "Ungültige IP-Adresse eingegeben!"
     },
     "EN": {
         "title": "HF Modulator Propagation Simulator Control (UDP 8888)",
@@ -39,7 +41,9 @@ LANGUAGES = {
         "sf_title": "⛈ Storm Cell", "sf_place": "⛈ Place Storm", "sf_click": "👉 Click Map...",
         "sf_on": "QRN Start", "sf_off": "QRN Stop", "sf_dir": "Dir (°):", "sf_spd": "Speed (km/h):",
         "sf_amp": "Base Power:", "sf_rate": "Frequency:",
-        "rx_ant_load" : "📡 Load RX Antenna ...", "rx_ant_type" : "Omnidirectional (Omni)", "rx_ant_dir" : "RX Antenna Alignment:"
+        "rx_ant_load" : "📡 Load RX Antenna ...", "rx_ant_type" : "Omnidirectional (Omni)", "rx_ant_dir" : "RX Antenna Alignment:",
+        "net_menu": "Network", "net_change_ip": "Change Target IP...", "net_dlg_title": "Network Settings",
+        "net_dlg_prompt": "Enter the target IP address of the modulator:\n(Current: {})", "net_err_title": "Error", "net_err_msg": "Invalid IP address entered!"
     },
     "FR": {
         "title": "Simulateur de propagation HF (UDP 8888)",
@@ -52,7 +56,11 @@ LANGUAGES = {
         "sf_title": "⛈ Orage", "sf_place": "⛈ Placer l'orage", "sf_click": "👉 Cliquer sur carte",
         "sf_on": "Démarrer QRN", "sf_off": "Arrêter QRN", "sf_dir": "Dir (°):", "sf_spd": "Vitesse (km/h):",
         "sf_amp": "Puissance:", "sf_rate": "Fréquence:",
-        "rx_ant_load" : "📡 Charger l'antenne RX...", "rx_ant_type" : "Omnidirectionnelle (Omni)", "rx_ant_dir" : "Alignement de l'antenne RX :"
+        "rx_ant_load" : "📡 Charger l'antenne RX...", "rx_ant_type" : "Omnidirectionnelle (Omni)", "rx_ant_dir" : "Alignement de l'antenne RX :",
+        "net_menu": "Réseau", "net_change_ip": "Modifier l'IP cible...", "net_dlg_title": "Paramètres réseau",
+        "net_dlg_prompt": "Entrez l'adresse IP cible du modulateur :\n(Actuelle : {})", "net_err_title": "Erreur", "net_err_msg": "Adresse IP saisie invalide !",
+        "net_menu": "Réseau", "net_change_ip": "Modifier l'IP cible...", "net_dlg_title": "Paramètres réseau",
+        "net_dlg_prompt": "Entrez l'adresse IP cible du modulateur :\n(Actuelle : {})", "net_err_title": "Erreur", "net_err_msg": "Adresse IP saisie invalide !"
 
     },
     "IT": {
@@ -66,7 +74,9 @@ LANGUAGES = {
         "sf_title": "⛈ Temporale", "sf_place": "⛈ Piazza temporale", "sf_click": "👉 Clicca sulla mappa",
         "sf_on": "Avvia QRN", "sf_off": "Ferma QRN", "sf_dir": "Dir (°):", "sf_spd": "Velocità:",
         "sf_amp": "Potenza:", "sf_rate": "Frequenza:",
-        "rx_ant_load" : "📡 Carica antenna RX...", "rx_ant_type" : "Omnidirezionale (Omni)", "rx_ant_dir" : "Allineamento antenna RX :"
+        "rx_ant_load" : "📡 Carica antenna RX...", "rx_ant_type" : "Omnidirezionale (Omni)", "rx_ant_dir" : "Allineamento antenna RX :",
+         "net_menu": "Rete", "net_change_ip": "Cambia IP di destinazione...", "net_dlg_title": "Impostazioni di rete",
+        "net_dlg_prompt": "Inserisci l'indirizzo IP di destinazione del modulatore:\n(Attuale: {})", "net_err_title": "Errore", "net_err_msg": "Indirizzo IP inserito non valido!"
 
     },
     "JP": {
@@ -80,8 +90,9 @@ LANGUAGES = {
         "sf_title": "⛈ 雷雨セル", "sf_place": "⛈ 雷雨を配置", "sf_click": "👉 地図をクリック...",
         "sf_on": "QRN 開始", "sf_off": "QRN 停止", "sf_dir": "方向 (°):", "sf_spd": "速度 (km/h):",
         "sf_amp": "基本電力:", "sf_rate": "頻度:",
-        "rx_ant_load" : "📡 RXアンテナを読み込む...", "rx_ant_type" : "無指向性 (オムニ)", "rx_ant_dir" : "RXアンテナ方向:"
-
+        "rx_ant_load" : "📡 RXアンテナを読み込む...", "rx_ant_type" : "無指向性 (オムニ)", "rx_ant_dir" : "RXアンテナ方向:",
+        "net_menu": "ネットワーク", "net_change_ip": "ターゲットIPを変更...", "net_dlg_title": "ネットワーク設定",
+        "net_dlg_prompt": "モジュレーターのターゲットIPアドレスを入力してください:\n(現在: {})", "net_err_title": "エラー", "net_err_msg": "無効なIPアドレスが入力されました！"
     }
 }
 
@@ -97,7 +108,13 @@ class RadioMapApp:
         self.antenna_engine = AntennaEngine(self)
 
         # UDP Setup für externen Modulator (Gain & Sferics Split)
-        self.udp_ip = "127.0.0.1"; self.udp_port_gain = 8888; self.udp_port_sferics = 8889
+        #self.udp_ip = "127.0.0.1"; self.udp_port_gain = 8888; self.udp_port_sferics = 8889
+        # Konfiguration laden
+        self.config_file = "app_config.json"
+        self.udp_ip = self.load_ip_config()
+
+        # UDP Setup für externen Modulator (Gain & Sferics Split)
+        self.udp_port_gain = 8888; self.udp_port_sferics = 8889
         self.sock_gain = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock_sferics = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -141,6 +158,58 @@ class RadioMapApp:
         self.load_all_from_folder("tx_sites")
         self.change_language("DE")
 
+
+    def load_ip_config(self):
+        """Lädt die IP aus der Config-Datei oder gibt localhost zurück, falls sie nicht existiert."""
+        if os.path.exists(self.config_file):
+            try:
+                with open(self.config_file, 'r') as f:
+                    config = json.load(f)
+                    return config.get("udp_ip", "127.0.0.1")
+            except:
+                pass
+        return "127.0.0.1"
+
+
+    def save_ip_config(self, new_ip):
+        """Speichert die neue IP in der Config-Datei."""
+        with open(self.config_file, 'w') as f:
+            json.dump({"udp_ip": new_ip}, f)
+
+    def change_target_ip(self):
+        """Öffnet einen Dialog zur Eingabe einer neuen IP-Adresse."""
+        T = self.LANGUAGES[self.cur_lang] # Aktuelle Sprache laden
+        new_ip = simpledialog.askstring(
+            T["net_dlg_title"], 
+            T["net_dlg_prompt"].format(self.udp_ip),
+            initialvalue=self.udp_ip,
+            parent=self.root
+        )
+        
+        if new_ip:
+            new_ip = new_ip.strip()
+            # Einfache Validierung (verhindert Abstürze bei Quatsch-Eingaben)
+            try:
+                socket.inet_aton(new_ip) # Prüft, ob es eine gültige IPv4 Struktur hat
+                self.udp_ip = new_ip
+                self.save_ip_config(new_ip)
+                
+                # Fenstertitel updaten, damit man sofort sieht, wohin gesendet wird
+                self.update_window_titles()
+                
+            except socket.error:
+                tk.messagebox.showerror(T["net_err_title"], T["net_err_msg"])
+
+    def update_window_titles(self):
+        """Aktualisiert die Titelzeile mit der aktuellen IP."""
+        T = self.LANGUAGES[self.cur_lang]
+        # Ersetzt "(UDP 8888)" dynamisch mit der IP
+        base_title = T["title"].replace("(UDP 8888)", f"({self.udp_ip} : UDP 8888)")
+        self.root.title(base_title)
+        if hasattr(self, 'sim_win') and self.sim_win.winfo_exists():
+            self.sim_win.title(base_title)
+
+
     def udp_gps_listener(self):
         """Lauscht auf Port 8886 auf Koordinaten vom Navi."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -173,6 +242,12 @@ class RadioMapApp:
         # 2. Modulator-Menü
         self.mod_menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(menu=self.mod_menu)
+
+        # 3. Netzwerk-Menü
+        self.net_menu = tk.Menu(self.menubar, tearoff=0)
+        self.net_menu.add_command(label="Ziel-IP ändern...", command=self.change_target_ip)
+        self.menubar.add_cascade(label="Netzwerk", menu=self.net_menu)
+
         self.root.config(menu=self.menubar)
 
     def update_sferics_button_color(self):
@@ -186,7 +261,8 @@ class RadioMapApp:
         T = LANGUAGES[code]
 
         # UI-Updates im Simulationsfenster
-        self.root.title(T["title"]); self.sim_win.title(T["title"])
+        #self.root.title(T["title"]); self.sim_win.title(T["title"])
+        self.update_window_titles()
         self.lbl_date_desc.config(text=T["date"]); self.lbl_time_desc.config(text=T["time"])
         self.lbl_sens_desc.config(text=T["sens"]); self.lbl_pot_title.config(text=T["pot_head"])
         self.lbl_cur_title.config(text=f"{T['cur_head']} ({T['list_hdr']})")
@@ -230,6 +306,12 @@ class RadioMapApp:
         self.mod_menu.add_command(label=T["mod_custom"], command=self.set_global_gain_dialog)
         # Setzt den Titel des 2. Menü-Eintrags
         self.menubar.entryconfig(2, label=T["mod_menu"])
+
+        # Netzwerk-Menü aktualisieren
+        self.net_menu.delete(0, tk.END)
+        self.net_menu.add_command(label=T["net_change_ip"], command=self.change_target_ip)
+        self.menubar.entryconfig(3, label=T["net_menu"])
+
         # Marker-Text anpassen        
         if self.receiver_marker: self.receiver_marker.set_text(T["rec_marker"])
 
