@@ -122,6 +122,13 @@ class RadioMapApp:
         self.gps_udp_port = 8886
         threading.Thread(target=self.udp_gps_listener, daemon=True).start()
 
+        # --- UDP Antennen-Steuerung (Port 8887) ---
+        self.udp_heading_port = 8887
+        self.target_heading = 0.0   # Der Wert, der vom Netzwerk kommt
+        self.current_heading = 0.0  # Der Wert, der aktuell in der UI gezeichnet ist
+        threading.Thread(target=self.udp_heading_listener, daemon=True).start()
+        self.root.after(50, self.process_udp_heading) # Den Taktgeber für die flüssige UI-Aktualisierung starten (50ms = 20 FPS)
+
         self.is_realtime_running = False; self.is_fast_running = False; self.last_pc_minute = -1
 
         # 1. Datenbank & Geocoder Initialisierung
@@ -228,6 +235,67 @@ class RadioMapApp:
                     self.root.after_idle(self.set_receiver, (lat, lon))
             except:
                 pass
+
+    def udp_heading_listener(self):
+        """Lauscht auf Port 8887. Verarbeitet HDG-Steuerung und sendet MSI/ANT-Antenenncharakteristik an Trainee App."""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(("0.0.0.0", self.udp_heading_port))
+        
+        while True:
+            try:
+                # 'addr' enthält ein Tupel: (IP-Adresse, Port) des Schüler-PCs
+                data, addr = sock.recvfrom(2048) 
+                message = data.decode('utf-8').strip()
+                
+                # FALL 1: Schüler bittet um das aktuelle Antennendiagramm
+                if message == "GET_CONFIG":
+                    if hasattr(self, 'antenna_engine') and self.antenna_engine.is_active:
+                        # Wir nehmen das genordete 360°-Diagramm aus der Engine
+                        pattern_data = self.antenna_engine.horizontal_pattern
+                        
+                        # Wir verpacken das Dictionary als JSON-String und senden es zurück
+                        response = json.dumps({
+                            "status": "OK",
+                            "filename": os.path.basename(self.antenna_engine.filename),
+                            "pattern": pattern_data
+                        })
+                        sock.sendto(response.encode('utf-8'), addr)
+                    else:
+                        # Falls der Ausbilder noch keine Antenne geladen hat
+                        response = json.dumps({"status": "NO_ANTENNA_LOADED"})
+                        sock.sendto(response.encode('utf-8'), addr)
+                
+                # FALL 2: Schüler sendet einen neuen Drehwinkel (z.B. "HDG:145.5")
+                elif message.startswith("HDG:"):
+                    try:
+                        val_str = message.split(":")[1]
+                        new_heading = float(val_str) % 360.0
+                        self.target_heading = new_heading
+                    except (IndexError, ValueError):
+                        pass # Fehlerhaftes Format ignoriert
+                        
+            except Exception as e:
+                print(f"Fehler im UDP-Kombilistener: {e}")
+
+
+
+    def process_udp_heading(self):
+        """Puffert die Hardware-Inputs und updatet UI & Engine max 20x pro Sekunde."""
+        # Wir führen das Update nur aus, wenn überhaupt eine Antenne geladen ist
+        if hasattr(self, 'antenna_engine') and self.antenna_engine.is_active:
+            
+            # Hat sich der Wert seit dem letzten Tick verändert?
+            if self.target_heading != self.current_heading:
+                self.current_heading = self.target_heading
+                
+                # 1. UI Slider visuell nachführen
+                self.sl_ant_dir.set(self.current_heading)
+                
+                # 2. Bestehende Logik triggern (berechnet Dämpfung, zeichnet Polygon, sendet UDP 8888)
+                self.update_antenna_heading(self.current_heading)
+                
+        # Schleife fortsetzen (Pumpt alle 50ms)
+        self.root.after(50, self.process_udp_heading)
 
 
     def setup_menu(self):
