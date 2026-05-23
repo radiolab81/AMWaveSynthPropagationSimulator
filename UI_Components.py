@@ -237,7 +237,7 @@ class RadioMapApp:
                 pass
 
     def udp_heading_listener(self):
-        """Lauscht auf Port 8887. Verarbeitet HDG-Steuerung und sendet MSI/ANT-Antenenncharakteristik an Trainee App."""
+        """Lauscht auf Port 8887. Verarbeitet HDG-Steuerung und sendet MSI/ANT-Antenenncharakteristik sowie Senderdaten an Trainee App."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(("0.0.0.0", self.udp_heading_port))
         
@@ -264,8 +264,32 @@ class RadioMapApp:
                         # Falls der Ausbilder noch keine Antenne geladen hat
                         response = json.dumps({"status": "NO_ANTENNA_LOADED"})
                         sock.sendto(response.encode('utf-8'), addr)
+
+
+                # FALL 2: Schüler bittet um die Liste aller Senderstandorte
+                elif message == "GET_TRANSMITTERS":
+                    tx_list = []
+                    
+                    # Wir iterieren über alle Marker, die aktuell auf der Karte gezeichnet sind
+                    for marker in self.map_widget.canvas_marker_list:
+                        # Wir prüfen, ob der Marker ein 'data' Attribut hat (filtert den blauen RX-Marker heraus)
+                        if hasattr(marker, 'data') and isinstance(marker.data, dict) and "freq" in marker.data:
+                            tx_list.append({
+                                "lat": marker.position[0],
+                                "lon": marker.position[1],
+                                "freq": marker.data.get("freq")
+                                #"kw": marker.data.get("kw"),
+                                #"prog": marker.data.get("prog")
+                            })
+                    
+                    # Alles als JSON verpacken
+                    response = json.dumps({
+                        "status": "OK",
+                        "transmitters": tx_list
+                    })
+                    sock.sendto(response.encode('utf-8'), addr)
                 
-                # FALL 2: Schüler sendet einen neuen Drehwinkel (z.B. "HDG:145.5")
+                # FALL 3: Schüler sendet einen neuen Drehwinkel (z.B. "HDG:145.5")
                 elif message.startswith("HDG:"):
                     try:
                         val_str = message.split(":")[1]
