@@ -7,12 +7,17 @@ This client-server architecture utilizes a zero-config UDP broadcast system, all
 ## 🧭 DFscope: The Trainee Console
 **DFscope** is a "Glass Cockpit" style tactical display that transforms the trainee's screen into a radio direction finder control. It directly receives the currently active antenna radiation pattern (imported via `.MSI` or `.ANT` files) from the instructor's engine and renders it as a live, rotatable polar plot.
 
+![UI1](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/plugins/DFscope/www/UIDFscope.jpg "")
+
 * **Real-Time Null Steering:** Automatically calculates and visually highlights signal nulls (minimums) in the antenna pattern, providing an alphanumeric readout of the precise bearing.
 * **Dynamic Attenuation Plotting:** Renders a smooth, dynamic polygon representing signal strength relative to the current heading, scaling dynamically to a 30 dB dynamic range.
 * **Zero-Latency Hardware Control:** As the trainee rotates the digital lubber line, heading data (`HDG`) is streamed back to the master simulator. This instantly alters the RF signal synthesis of the AMWaveSynth engine, directly affecting the live transmission emitted via your SDR. Trainees can physically hear the signal fading and nulling on a real radio receiver in real-time!
 
 ## 🗺️ DFmap: Tactical Bearing Plotter
 **DFmap** complements the acoustic and polar data by providing geodetic context. It acts as the trainee's digital map board, automatically syncing the live list of active transmitters from the propagation engine.
+
+
+![UI1](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/plugins/DFscope/www/UIDFmap.jpg "")
 
 * **Live Transmitter Sync:** Instantly populates the map with all currently simulated active transmission sites, complete with frequency data.
 * **Geodesic Bearing Lines:** Trainees can click on a known transmitter and drag their virtual "beam" across the map. The engine calculates true geodesic curves (accounting for the Earth's curvature) to plot highly accurate lines of bearing.
