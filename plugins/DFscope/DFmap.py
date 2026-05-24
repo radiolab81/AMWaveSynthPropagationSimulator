@@ -54,7 +54,7 @@ class TraineeApp:
             self.map_widget, text="🔴 SYNC", font=("Arial", 12, "bold"),
             bg="white", fg="red", command=self.start_sync, relief="raised", padx=10
         )
-        self.btn_sync.place(relx=0.02, rely=0.02)
+        self.btn_sync.place(relx=0.08, rely=0.01)
 
     # --- GEODÄTISCHE BERECHNUNGEN ---
     def get_destination_point(self, lat, lon, bearing_deg, distance_km):
