@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import messagebox
 import socket
 import json
 import math
@@ -13,7 +14,7 @@ class StudentConsole:
         self.root.resizable(False, False)
 
         # --- NETWORK CONFIG ---
-        self.target_ip = "127.0.0.1" # Ausbilder IP
+        self.target_ip = "127.0.0.1" # Ausbilder IP (Default)
         self.target_port = 8887
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # Timeout für Receive, damit das UI beim Warten auf die Antenne nicht einfriert
@@ -119,11 +120,11 @@ class StudentConsole:
                 self.root.after(0, self.on_config_received_error)
                 
         except socket.timeout:
-            print("Timeout: Ausbilderapp antwortet nicht.")
-            self.root.after(0, self.on_config_received_error)
+            print("Timeout: Ausbilderapp antwortet nicht auf", self.target_ip)
+            self.root.after(0, self.show_discovery_dialog)
         except Exception as e:
             print(f"Fehler beim Sync: {e}")
-            self.root.after(0, self.on_config_received_error)
+            self.root.after(0, self.show_discovery_dialog)
 
     def on_config_received_success(self):
         self.btn_sync.config(text="SYNC: READY", bg="#10b981") # Green success
@@ -134,6 +135,129 @@ class StudentConsole:
         self.btn_sync.config(text="SYNC FAILED", bg="#ef4444") # Red error
         self.lbl_status.config(text="ANTENNA: OFFLINE", fg="#ef4444")
         self.root.after(2000, lambda: self.btn_sync.config(text="SYNC: LOAD DATA", bg="#0ea5e9"))
+
+    # ==========================================
+    # --- NETWORK DISCOVERY / MODAL DIALOG ---
+    # ==========================================
+    def show_discovery_dialog(self):
+        """Öffnet einen modalen Dialog, wenn der Server nicht erreichbar ist."""
+        self.on_config_received_error() # Button auf Rot setzen
+
+        # Modal Dialog erstellen
+        self.dlg = tk.Toplevel(self.root)
+        self.dlg.title("Connection to Server failed")
+        self.dlg.geometry("450x350")
+        self.dlg.configure(bg="#1e293b")
+        self.dlg.resizable(False, False)
+        
+        # Fokus auf den Dialog zwingen (Modal)
+        self.dlg.transient(self.root)
+        self.dlg.grab_set()
+
+        # UI Elemente im Dialog
+        tk.Label(self.dlg, text=f"No msg from {self.target_ip}", 
+                 bg="#1e293b", fg="#ef4444", font=("Courier", 12, "bold")).pack(pady=10)
+        
+        tk.Label(self.dlg, text="Scan local network for service?", 
+                 bg="#1e293b", fg="#f8fafc", font=("Courier", 10)).pack(pady=5)
+
+        # Liste für gefundene Server
+        self.server_listbox = tk.Listbox(self.dlg, bg="#0f172a", fg="#38bdf8", font=("Courier", 10),
+                                         selectbackground="#334155", highlightthickness=0)
+        self.server_listbox.pack(fill="both", expand=True, padx=20, pady=10)
+
+        # Buttons im Dialog
+        btn_frame = tk.Frame(self.dlg, bg="#1e293b")
+        btn_frame.pack(fill="x", pady=10)
+
+        self.btn_scan = tk.Button(btn_frame, text="START SCAN", bg="#f59e0b", fg="white", 
+                                  font=("Courier", 10, "bold"), command=self.start_network_scan)
+        self.btn_scan.pack(side="left", padx=20)
+
+        self.btn_connect = tk.Button(btn_frame, text="CONNECT...", bg="#10b981", fg="white", 
+                                     font=("Courier", 10, "bold"), command=self.connect_to_selected, state="disabled")
+        self.btn_connect.pack(side="right", padx=20)
+
+        # Automatisch Scan starten
+        self.start_network_scan()
+
+    def start_network_scan(self):
+        """Startet den UDP Broadcast Scan in einem Thread."""
+        self.server_listbox.delete(0, tk.END)
+        self.server_listbox.insert(tk.END, "Scan network (pls wait)...")
+        self.btn_scan.config(state="disabled", text="SCANNING...")
+        self.btn_connect.config(state="disabled")
+        
+        self.found_servers = {} # Speichert { "IP Anzeige String": "Echte IP" }
+        threading.Thread(target=self._broadcast_scan_thread, daemon=True).start()
+
+    def _broadcast_scan_thread(self):
+        """Sendet einen Broadcast ins Netzwerk und sammelt Antworten."""
+        scanner_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        scanner_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1) # Erlaube Broadcast
+        scanner_sock.settimeout(2.0) # Nach 2 Sekunden geben wir auf
+
+        results = {}
+        try:
+            # 255.255.255.255 schickt das Paket an alle im lokalen Subnetz
+            scanner_sock.sendto("GET_CONFIG".encode('utf-8'), ("255.255.255.255", self.target_port))
+            
+            while True:
+                try:
+                    data, addr = scanner_sock.recvfrom(65536)
+                    ip = addr[0]
+                    if ip not in results:
+                        resp = json.loads(data.decode('utf-8'))
+                        # Wenn die Gegenstelle sinnvoll antwortet, ist es unser Server
+                        if resp.get("status") in ["OK", "NO_ANTENNA_LOADED"]:
+                            filename = resp.get("filename", "No Config")
+                            results[ip] = filename
+                except socket.timeout:
+                    break # Zeit abgelaufen, Scan beendet
+        except Exception as e:
+            print(f"Scan Fehler: {e}")
+        finally:
+            scanner_sock.close()
+
+        # Update UI via Main-Thread
+        self.root.after(0, lambda: self._update_scan_results(results))
+
+    def _update_scan_results(self, results):
+        """Wird aufgerufen, wenn der Scan-Thread fertig ist."""
+        self.server_listbox.delete(0, tk.END)
+        self.found_servers.clear()
+
+        if not results:
+            self.server_listbox.insert(tk.END, "No server in network.")
+        else:
+            for ip, filename in results.items():
+                display_text = f"IP: {ip} | Datei: {filename}"
+                self.found_servers[display_text] = ip
+                self.server_listbox.insert(tk.END, display_text)
+            
+            self.btn_connect.config(state="normal") # Verbindung erlauben
+            self.server_listbox.select_set(0) # Erstes Element anwählen
+
+        self.btn_scan.config(state="normal", text="NEW SCAN")
+
+    def connect_to_selected(self):
+        """Übernimmt die ausgewählte IP und startet einen neuen Sync-Versuch."""
+        selection = self.server_listbox.curselection()
+        if not selection:
+            return
+            
+        selected_text = self.server_listbox.get(selection[0])
+        selected_ip = self.found_servers.get(selected_text)
+
+        if selected_ip:
+            self.target_ip = selected_ip
+            print(f"Neue Ziel-IP gesetzt: {self.target_ip}")
+            self.dlg.destroy() # Dialog schließen
+            self.request_config() # Direkt neuen Sync anstoßen
+
+    # ==========================================
+    # --- RENDER & LOGIC (Unverändert) ---
+    # ==========================================
 
     def on_heading_change(self, val):
         """Slider Callback. Sendet UDP Paket und rotiert das lokale Diagramm."""
@@ -227,9 +351,7 @@ class StudentConsole:
                 ly = self.cy - self.radius * math.cos(rad)
                 
                 # Linie für die Nullstelle
-                self.canvas.create_line(self.cx, self.cy, lx, ly, 
-                                        fill="#2dd4bf", width=2, dash=(4, 4), tags="dynamic")
-                
+                self.canvas.create_line(self.cx, self.cy, lx, ly, fill="#2dd4bf", width=2, dash=(4, 4), tags="dynamic")
                 # Kleiner Kreis am Ende der Linie, damit man sie besser sieht
                 self.canvas.create_oval(lx-4, ly-4, lx+4, ly+4, fill="#2dd4bf", outline="#0f172a", tags="dynamic")
 
@@ -240,11 +362,8 @@ class StudentConsole:
                 ty = self.cy - text_r * math.cos(rad)
                 
                 # Text als kleiner "Tag" am Ende der Linie
-                self.canvas.create_text(tx, ty, 
-                                        text=f"{int(bearing_angle % 360)}°", 
-                                        fill="#2dd4bf", 
-                                        font=("Courier", 10, "bold"), 
-                                        tags="dynamic")
+                self.canvas.create_text(tx, ty, text=f"{int(bearing_angle % 360)}°", fill="#2dd4bf", 
+                                        font=("Courier", 10, "bold"), tags="dynamic")
 
 if __name__ == "__main__":
     root = tk.Tk()
