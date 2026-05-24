@@ -76,9 +76,20 @@ Create tactical field exercises straight from the cockpit of your PC.
 #### 4. Hardware-In-The-Loop (HIL) Signal & AGC Benchmarking
 Because the propagation engine modulates the **actual physical amplitude** via the connected SDR/RF modulator pipe, you can connect an authentic vintage communication receiver or a physical airborne ADF avionics unit directly to the RF output. The physical S-meter will drop, the audio will dip right into the noise floor as you hit an antenna null, and the hardware AGC loop will react natively to the calculated environmental physics.
 
+### 🚀 DFscope: 
+https://github.com/radiolab81/AMWaveSynthPropagationSimulator/tree/main/plugins/DFscope
+
+Network based trainee applications suite:
+![DF3](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/www/DFscope.jpg "Direction Finder Training Suite")
+
+* **📻 Amateur Radio (Ham) Clubs:** An ideal tool for indoor "Fox Hunt" (ARDF - Amateur Radio Direction Finding) training. Clubs can practice signal nulling, triangulation, and map plotting regardless of weather conditions or physical location constraints.
+* **⚓ Maritime & Aviation Schools:** A perfect sandbox for teaching traditional radio navigation techniques (like NDB/ADF tracking). It allows cadets to build confidence in using non-satellite-based, analog backup systems. In combination with MovableRXLocationPlayer, you can simulate a moving vessel in real time. 
+* **🎓 University & STEM Educators:** Provides students with a tangible way to experience RF physics. Instead of just looking at static antenna polar plots on a whiteboard, students can physically hear how radiation patterns and geographic distances affect real RF signals.
+
+
 
 ### 🚀 MovableRXLocationPlayer: 
-
+https://github.com/radiolab81/AMWaveSynthPropagationSimulator/tree/main/plugins/MovableRXLocationPlayer
 
 ![MRXLP0](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/plugins/MovableRXLocationPlayer/www/mrxlpl_ui1.jpg "virtual car radio travel")
 
