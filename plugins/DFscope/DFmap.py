@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import simpledialog
+from tkinter import simpledialog, messagebox
 import socket
 import json
 import threading
@@ -7,12 +7,11 @@ import math
 import os
 from tkintermapview import TkinterMapView
 from PIL import Image, ImageTk
-from tkinter import messagebox
 
 class TraineeApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("DFmap")
+        self.root.title("DFmap (Trainee Map)")
         self.root.geometry("900x900")
 
         try:
@@ -25,6 +24,7 @@ class TraineeApp:
             print(f"Konnte tower.png nicht laden: {e}")
             self.tower_icon = None
 
+        # --- NETWORK CONFIG ---
         self.teacher_ip = "127.0.0.1" 
         self.teacher_port = 8887
 
@@ -186,9 +186,13 @@ class TraineeApp:
                 self.root.after(0, self.draw_transmitters, response.get("transmitters", []))
             else:
                 self.root.after(0, self.sync_failed)
+                
+        except socket.timeout:
+            print(f"Timeout: Ausbilder {self.teacher_ip} antwortet nicht.")
+            self.root.after(0, self.show_discovery_dialog)
         except Exception as e:
             print(f"Fehler beim Sync: {e}")
-            self.root.after(0, self.sync_failed)
+            self.root.after(0, self.show_discovery_dialog)
         finally:
             sock.close()
 
@@ -243,6 +247,113 @@ class TraineeApp:
         # Text-Label am Marker live mit der Gradzahl aktualisieren
         freq = marker.data.get("freq", "")
         marker.set_text(f"{freq} kHz\n➔ {heading:.1f}°")
+
+    # ==========================================
+    # --- NETWORK DISCOVERY / MODAL DIALOG ---
+    # ==========================================
+    def show_discovery_dialog(self):
+        self.btn_sync.config(text="❌ ERROR", fg="red", state="normal")
+
+        self.dlg = tk.Toplevel(self.root)
+        self.dlg.title("Connection to Server failed")
+        self.dlg.geometry("450x350")
+        self.dlg.configure(bg="#2d2d2d") # Dunkles, neutrales UI für den Dialog
+        self.dlg.resizable(False, False)
+        
+        self.dlg.transient(self.root)
+        self.dlg.grab_set()
+
+        tk.Label(self.dlg, text=f"No msg from {self.teacher_ip}", 
+                 bg="#2d2d2d", fg="#ff4444", font=("Arial", 12, "bold")).pack(pady=10)
+        
+        tk.Label(self.dlg, text="Scan local network for service?", 
+                 bg="#2d2d2d", fg="white", font=("Arial", 10)).pack(pady=5)
+
+        self.server_listbox = tk.Listbox(self.dlg, bg="#1e1e1e", fg="#55aaff", font=("Consolas", 11),
+                                         selectbackground="#444444", highlightthickness=0)
+        self.server_listbox.pack(fill="both", expand=True, padx=20, pady=10)
+
+        btn_frame = tk.Frame(self.dlg, bg="#2d2d2d")
+        btn_frame.pack(fill="x", pady=10)
+
+        self.btn_scan = tk.Button(btn_frame, text="START SCAN", bg="#ffaa00", fg="black", 
+                                  font=("Arial", 10, "bold"), command=self.start_network_scan)
+        self.btn_scan.pack(side="left", padx=20)
+
+        self.btn_connect = tk.Button(btn_frame, text="CONNECT...", bg="#00aa00", fg="white", 
+                                     font=("Arial", 10, "bold"), command=self.connect_to_selected, state="disabled")
+        self.btn_connect.pack(side="right", padx=20)
+
+        self.start_network_scan()
+
+    def start_network_scan(self):
+        self.server_listbox.delete(0, tk.END)
+        self.server_listbox.insert(tk.END, "Scan network (pls wait)...")
+        self.btn_scan.config(state="disabled", text="SCANNING...")
+        self.btn_connect.config(state="disabled")
+        
+        self.found_servers = {} 
+        threading.Thread(target=self._broadcast_scan_thread, daemon=True).start()
+
+    def _broadcast_scan_thread(self):
+        scanner_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        scanner_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        scanner_sock.settimeout(2.0) 
+
+        results = {}
+        try:
+            # Wir rufen im Netzwerk: "Gib mir die Senderliste!"
+            scanner_sock.sendto("GET_TRANSMITTERS".encode('utf-8'), ("255.255.255.255", self.teacher_port))
+            
+            while True:
+                try:
+                    data, addr = scanner_sock.recvfrom(65536)
+                    ip = addr[0]
+                    if ip not in results:
+                        resp = json.loads(data.decode('utf-8'))
+                        # Hat der Server geantwortet?
+                        if resp.get("status") == "OK" and "transmitters" in resp:
+                            tx_count = len(resp.get("transmitters", []))
+                            results[ip] = f"{tx_count} Sender aktiv"
+                except socket.timeout:
+                    break 
+        except Exception as e:
+            print(f"Scan Fehler: {e}")
+        finally:
+            scanner_sock.close()
+
+        self.root.after(0, lambda: self._update_scan_results(results))
+
+    def _update_scan_results(self, results):
+        self.server_listbox.delete(0, tk.END)
+        self.found_servers.clear()
+
+        if not results:
+            self.server_listbox.insert(tk.END, "No server in network.")
+        else:
+            for ip, tx_info in results.items():
+                display_text = f"IP: {ip} | {tx_info}"
+                self.found_servers[display_text] = ip
+                self.server_listbox.insert(tk.END, display_text)
+            
+            self.btn_connect.config(state="normal") 
+            self.server_listbox.select_set(0) 
+
+        self.btn_scan.config(state="normal", text="NEW SCAN")
+
+    def connect_to_selected(self):
+        selection = self.server_listbox.curselection()
+        if not selection:
+            return
+            
+        selected_text = self.server_listbox.get(selection[0])
+        selected_ip = self.found_servers.get(selected_text)
+
+        if selected_ip:
+            self.teacher_ip = selected_ip
+            print(f"Neue Ausbilder-IP gesetzt: {self.teacher_ip}")
+            self.dlg.destroy() 
+            self.start_sync() # Stößt den Sync mit der neuen IP direkt wieder an
 
 if __name__ == "__main__":
     root = tk.Tk()
