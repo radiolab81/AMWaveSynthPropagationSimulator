@@ -17,7 +17,7 @@ from Antenna_Engine import AntennaEngine
 LANGUAGES = {
     "DE": {
         "title": "Ausbreitungssimulator für HF-Modulator Steuerung (UDP 8888)",
-        "date": "Datum (TT.MM):", "time": "Uhrzeit:", "sens": "Schwelle (dBµV/m):",
+        "date": "Datum (TT.MM):", "time": "Uhrzeit (UTC):", "sens": "Schwelle (dBµV/m):",
         "sun": "Sonne (RX):", "pot_head": "Potential (Nacht)", "cur_head": "AKTUELLER Empfang",
         "list_hdr": "dB | Hz | Name | Modus | ms", "fast": "⏩ Fast-Forward",
         "fast_stop": "■ Stop Fast", "real": "▶ Echtzeit Start", "real_stop": "■ Echtzeit Stop",
@@ -32,7 +32,7 @@ LANGUAGES = {
     },
     "EN": {
         "title": "HF Modulator Propagation Simulator Control (UDP 8888)",
-        "date": "Date (DD.MM):", "time": "Time:", "sens": "Threshold (dBµV/m):",
+        "date": "Date (DD.MM):", "time": "Time (UTC):", "sens": "Threshold (dBµV/m):",
         "sun": "Sun (RX):", "pot_head": "Potential (Night)", "cur_head": "CURRENT Reception",
         "list_hdr": "dB | Hz | Name | Mode | ms", "fast": "⏩ Fast-Forward",
         "fast_stop": "■ Stop Fast", "real": "▶ Start Realtime", "real_stop": "■ Stop Realtime",
@@ -47,7 +47,7 @@ LANGUAGES = {
     },
     "FR": {
         "title": "Simulateur de propagation HF (UDP 8888)",
-        "date": "Date (JJ.MM):", "time": "Heure:", "sens": "Seuil (dBµV/m):",
+        "date": "Date (JJ.MM):", "time": "Heure (UTC):", "sens": "Seuil (dBµV/m):",
         "sun": "Soleil (RX):", "pot_head": "Potentiel (Nuit)", "cur_head": "Réception ACTUELLE",
         "list_hdr": "dB | Hz | Nom | Mode | ms", "fast": "⏩ Avance rapide",
         "fast_stop": "■ Arrêter", "real": "▶ Temps réel", "real_stop": "■ Arrêter",
@@ -65,7 +65,7 @@ LANGUAGES = {
     },
     "IT": {
         "title": "Simulatore di propagazione HF (UDP 8888)",
-        "date": "Data (GG.MM):", "time": "Ora:", "sens": "Soglia (dBµV/m):",
+        "date": "Data (GG.MM):", "time": "Ora (UTC):", "sens": "Soglia (dBµV/m):",
         "sun": "Sole (RX):", "pot_head": "Potenziale (Notte)", "cur_head": "Ricezione ATTUALE",
         "list_hdr": "dB | Hz | Nome | Modo | ms", "fast": "⏩ Avanti veloce",
         "fast_stop": "■ Ferma", "real": "▶ Tempo reale", "real_stop": "■ Ferma",
@@ -81,7 +81,7 @@ LANGUAGES = {
     },
     "JP": {
         "title": "HFモジュレーター伝搬シミュレーター (UDP 8888)",
-        "date": "日付 (日.月):", "time": "時刻:", "sens": "しきい値 (dBµV/m):",
+        "date": "日付 (日.月):", "time": "時刻 (UTC):", "sens": "しきい値 (dBµV/m):",
         "sun": "太陽 (RX):", "pot_head": "ポテンシャル (夜間)", "cur_head": "現在の受信状態",
         "list_hdr": "dB | Hz | 放送局名 | モード | ms", "fast": "⏩ 早送り",
         "fast_stop": "■ 停止", "real": "▶ リアルタイム開始", "real_stop": "■ 停止",
