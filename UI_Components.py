@@ -550,12 +550,19 @@ class RadioMapApp:
             # PRÜFUNG: Hat die PC-Uhr gerade auf eine neue Minute gewechselt?
             if now.minute != self.last_pc_minute:
                 if self.last_pc_minute != -1:
-                    # Exakt eine Minute (1/60 Stunde) addieren
-                    nv = (float(self.time_slider.get()) + (1/60)) % 24
+                    # Synchronisieren, falls der User den Slider manuell verschoben hat
+                    current_slider = float(self.time_slider.get())
+                    if not hasattr(self, '_last_slider_val') or current_slider != self._last_slider_val:
+                        self._realtime_hours_precise = current_slider
+
+                    # Exakt eine Minute (1/60 Stunde) auf den präzisen, ungerundeten Wert addieren
+                    self._realtime_hours_precise = (self._realtime_hours_precise + (1/60)) % 24
+                    nv = self._realtime_hours_precise
 
                     # Slider und Label aktualisieren
-                    self.time_slider.set(nv); 
-                    self.update_time_label(nv);
+                    self.time_slider.set(nv)
+                    self._last_slider_val = float(self.time_slider.get()) # Speichert den vom Slider gerundeten Ist-Wert
+                    self.update_time_label(nv)
 
                     # Simulation neu berechnen
                     self.run_simulation(True)
@@ -566,6 +573,10 @@ class RadioMapApp:
                         #print("sferice_active_for: \n",self.storm_engine.storm_life_minutes)
                         if self.storm_engine.storm_life_minutes <= 0: self.toggle_sferics() # Schaltet QRN aus und löscht Icons/Pfeile
                         #print("⛈ Gewitter hat sich aufgelöst.")
+                else:
+                    # Initialisierung beim ersten Startlauf von Realtime
+                    self._realtime_hours_precise = float(self.time_slider.get())
+                    self._last_slider_val = self._realtime_hours_precise
 
             # Wir prüfen häufig (alle 0.5s), damit wir den Moment 
             # des Umspringens präzise (max. 0.5s Verzögerung) erwischen.
