@@ -1,3 +1,4 @@
+import osm_fix
 import tkinter as tk
 from tkinter import ttk, simpledialog
 import os, glob, csv, sqlite3, time, socket, threading, random, json
