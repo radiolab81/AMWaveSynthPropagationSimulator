@@ -9,6 +9,8 @@
 #   * sichtbare Attribution "(c) OpenStreetMap contributors" + "Report a map issue"
 import io
 import os
+import threading
+import time
 import webbrowser
 import tkinter as tk
 from datetime import timedelta
@@ -25,6 +27,8 @@ ATTRIBUTION = "\u00a9 OpenStreetMap contributors"
 COPYRIGHT_URL = "https://www.openstreetmap.org/copyright"
 FIXTHEMAP_URL = "https://www.openstreetmap.org/fixthemap"
 MIN_CACHE = timedelta(days=7)   # Policy: mindestens 7 Tage, falls Header nicht lesbar
+MAX_CONNECTIONS = 2             # Policy: max. 2 gleichzeitige Download-Verbindungen
+PRECACHE_MAX_RADIUS = 2         # tkintermapview-Original: 8 (=17x17 Kacheln); hier nur moderates Look-ahead
 
 CACHE_DIR = Path(os.environ.get("AMWAVE_TILE_CACHE",
                  Path.home() / ".cache" / "AMWaveSynthPropagationSimulator"))
@@ -51,6 +55,7 @@ def _make_session():
 
 
 _session = _make_session()
+_net_slots = threading.BoundedSemaphore(MAX_CONNECTIONS)   # tkintermapview startet 25 Loader-Threads!
 
 
 class _Response:
@@ -74,10 +79,44 @@ class _RequestsShim:
         kwargs.pop("stream", None)
         headers = dict(kwargs.pop("headers", None) or {})
         headers["User-Agent"] = USER_AGENT
-        return _Response(_session.get(url, headers=headers, **kwargs))
+        with _net_slots:
+            return _Response(_session.get(url, headers=headers, **kwargs))
 
 
 _mw.requests = _RequestsShim()
+
+
+def _pre_cache_limited(self):
+    """Wie TkinterMapView.pre_cache (v1.29), aber Radius auf PRECACHE_MAX_RADIUS begrenzt
+    (Original: 8). Wird vor der Widget-Erzeugung gepatcht; der Thread startet erst im __init__."""
+    last_pos = None
+    radius = 1
+    zoom = round(self.zoom)
+    while self.running:
+        if last_pos != self.pre_cache_position:
+            last_pos = self.pre_cache_position
+            zoom = round(self.zoom)
+            radius = 1
+        if last_pos is not None and radius <= PRECACHE_MAX_RADIUS:
+            cx, cy = last_pos
+            for x in range(cx - radius, cx + radius + 1):
+                for yy in (cy + radius, cy - radius):
+                    if f"{zoom}{x}{yy}" not in self.tile_image_cache:
+                        self.request_image(zoom, x, yy)
+            for y in range(cy - radius, cy + radius + 1):
+                for xx in (cx + radius, cx - radius):
+                    if f"{zoom}{xx}{y}" not in self.tile_image_cache:
+                        self.request_image(zoom, xx, y)
+            radius += 1
+        else:
+            time.sleep(0.1)
+        if len(self.tile_image_cache) > 10_000:      # RAM-Cache begrenzen wie im Original
+            for key in list(self.tile_image_cache.keys())[:len(self.tile_image_cache) - 10_000]:
+                self.tile_image_cache.pop(key, None)
+
+
+if hasattr(_mw.TkinterMapView, "pre_cache"):
+    _mw.TkinterMapView.pre_cache = _pre_cache_limited
 
 
 def _open(url):
