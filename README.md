@@ -100,6 +100,27 @@ see: https://github.com/radiolab81/AMWaveSynthPropagationSimulator/tree/main/plu
  
 - more to come
 
+### 🗺️ Map tiles (OpenStreetMap & fallback)
+
+The maps are loaded from volunteer-run tile servers, so the simulator follows their usage
+policies: own User-Agent, on-disk tile cache, max. 2 parallel downloads, limited prefetch and
+a visible attribution in the map corner.
+
+* **Map style:** choose between *OpenStreetMap* and *OpenTopoMap* (openmaps.fr, with contour
+  lines) in the drop-down at the top right of the map. The choice is remembered.
+* **Automatic fallback:** if a server blocks us or is unreachable, the other one is used
+  automatically and a notice is shown on the map. The preferred server is retested rarely
+  (after 1 h, then 2 h, 4 h ... max. 24 h).
+* **Offline-friendly:** viewed tiles are cached in `~/.cache/AMWaveSynthPropagationSimulator/`
+  and reused. Cache duration, fallback behaviour and further providers can be configured at
+  the top of `osm_fix.py` (commented in detail, see also [docs/MAP_TILES.md](docs/MAP_TILES.md)).
+  No API key is needed.
+* Please keep usage reasonable (see the policies of
+  [OpenStreetMap](https://operations.osmfoundation.org/policies/tiles/) and
+  [openmaps.fr](https://openmaps.fr/tile-usage-policy.html), the latter is funded by donations).
+
+Map data © OpenStreetMap contributors (ODbL).
+
 ### Installation (can be done by uv paket manager)
 - checkout AMWaveSynthPropagationSimulator
 - get uv
