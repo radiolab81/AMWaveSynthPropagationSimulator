@@ -142,6 +142,7 @@ class RadioMapApp:
         # 2. Karten-Widget Setup
         self.map_widget = TkinterMapView(self.root, width=1200, height=900)
         self.map_widget.pack(fill="both", expand=True)
+        osm_fix.setup_map(self.map_widget)  # OSM-Policy: Tile-URL + Attribution
         # --- FIXIERTER BLITZ-BUTTON UNTEN LINKS IN MAP_WND---
         self.btn_map_sferics = tk.Button(
             self.map_widget, 
