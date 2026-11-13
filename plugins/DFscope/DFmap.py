@@ -31,6 +31,7 @@ class TraineeApp:
 
         self.map_widget = TkinterMapView(self.root, width=900, height=700)
         self.map_widget.pack(fill="both", expand=True)
+        osm_fix.setup_map(self.map_widget)  # OSM-Policy: Tile-URL + Attribution
         self.map_widget.set_position(51.1657, 10.4515) 
         self.map_widget.set_zoom(6)
 
