@@ -17,6 +17,7 @@ from Antenna_Engine import AntennaEngine
 # --- LOKALISIERUNGSDATEN (Inkl. Gewitter-Erweiterungen) ---
 LANGUAGES = {
     "DE": {
+        "tx_scene": "Senderlandschaft:", "tx_reload": "Ordner neu einlesen", "tx_none": "(keine Landschaft gefunden)", "tx_loading": "Lade {} ...",
         "title": "Ausbreitungssimulator für HF-Modulator Steuerung (UDP 8888)",
         "date": "Datum (TT.MM):", "time": "Uhrzeit (UTC):", "sens": "Schwelle (dBµV/m):",
         "sun": "Sonne (RX):", "pot_head": "Potential (Nacht)", "cur_head": "AKTUELLER Empfang",
@@ -32,6 +33,7 @@ LANGUAGES = {
         "net_dlg_prompt": "Geben Sie die Ziel-IP-Adresse des Modulators ein:\n(Aktuell: {})", "net_err_title": "Fehler", "net_err_msg": "Ungültige IP-Adresse eingegeben!"
     },
     "EN": {
+        "tx_scene": "Transmitter scenario:", "tx_reload": "Rescan folders", "tx_none": "(no scenario found)", "tx_loading": "Loading {} ...",
         "title": "HF Modulator Propagation Simulator Control (UDP 8888)",
         "date": "Date (DD.MM):", "time": "Time (UTC):", "sens": "Threshold (dBµV/m):",
         "sun": "Sun (RX):", "pot_head": "Potential (Night)", "cur_head": "CURRENT Reception",
@@ -47,6 +49,7 @@ LANGUAGES = {
         "net_dlg_prompt": "Enter the target IP address of the modulator:\n(Current: {})", "net_err_title": "Error", "net_err_msg": "Invalid IP address entered!"
     },
     "FR": {
+        "tx_scene": "Paysage d'émetteurs :", "tx_reload": "Relire les dossiers", "tx_none": "(aucun paysage trouvé)", "tx_loading": "Chargement {} ...",
         "title": "Simulateur de propagation HF (UDP 8888)",
         "date": "Date (JJ.MM):", "time": "Heure (UTC):", "sens": "Seuil (dBµV/m):",
         "sun": "Soleil (RX):", "pot_head": "Potentiel (Nuit)", "cur_head": "Réception ACTUELLE",
@@ -65,6 +68,7 @@ LANGUAGES = {
 
     },
     "IT": {
+        "tx_scene": "Scenario trasmettitori:", "tx_reload": "Rileggi cartelle", "tx_none": "(nessuno scenario trovato)", "tx_loading": "Caricamento {} ...",
         "title": "Simulatore di propagazione HF (UDP 8888)",
         "date": "Data (GG.MM):", "time": "Ora (UTC):", "sens": "Soglia (dBµV/m):",
         "sun": "Sole (RX):", "pot_head": "Potenziale (Notte)", "cur_head": "Ricezione ATTUALE",
@@ -81,6 +85,7 @@ LANGUAGES = {
 
     },
     "JP": {
+        "tx_scene": "送信所シナリオ:", "tx_reload": "フォルダを再読込", "tx_none": "(シナリオなし)", "tx_loading": "{} を読み込み中 ...",
         "title": "HFモジュレーター伝搬シミュレーター (UDP 8888)",
         "date": "日付 (日.月):", "time": "時刻 (UTC):", "sens": "しきい値 (dBµV/m):",
         "sun": "太陽 (RX):", "pot_head": "ポテンシャル (夜間)", "cur_head": "現在の受信状態",
@@ -113,6 +118,8 @@ class RadioMapApp:
         # Konfiguration laden
         self.config_file = "app_config.json"
         self.udp_ip = self.load_ip_config()
+        self.tx_root = "tx_sites"               # Basisordner; Unterordner = Senderlandschaften
+        self.current_scene = self.load_config().get("tx_scene")
 
         # UDP Setup für externen Modulator (Gain & Sferics Split)
         self.udp_port_gain = 8888; self.udp_port_sferics = 8889
@@ -164,26 +171,35 @@ class RadioMapApp:
         
         self.setup_menu()
         self.open_simulation_window()
-        self.load_all_from_folder("tx_sites")
+        self.refresh_scenes(load=True)
         self.change_language("DE")
 
 
-    def load_ip_config(self):
-        """Lädt die IP aus der Config-Datei oder gibt localhost zurück, falls sie nicht existiert."""
-        if os.path.exists(self.config_file):
-            try:
-                with open(self.config_file, 'r') as f:
-                    config = json.load(f)
-                    return config.get("udp_ip", "127.0.0.1")
-            except:
-                pass
-        return "127.0.0.1"
+    def load_config(self):
+        """Liest die komplette Konfiguration (leeres Dict, falls nicht vorhanden/defekt)."""
+        try:
+            with open(self.config_file, 'r') as f:
+                cfg = json.load(f)
+                return cfg if isinstance(cfg, dict) else {}
+        except Exception:
+            return {}
 
+    def save_config(self, **updates):
+        """Schreibt Werte in die Config, ohne andere Einträge zu überschreiben."""
+        cfg = self.load_config()
+        cfg.update(updates)
+        try:
+            with open(self.config_file, 'w') as f:
+                json.dump(cfg, f, indent=2)
+        except Exception as e:
+            print(f"Config konnte nicht gespeichert werden: {e}")
+
+    def load_ip_config(self):
+        """Lädt die IP aus der Config-Datei oder gibt localhost zurück."""
+        return self.load_config().get("udp_ip", "127.0.0.1")
 
     def save_ip_config(self, new_ip):
-        """Speichert die neue IP in der Config-Datei."""
-        with open(self.config_file, 'w') as f:
-            json.dump({"udp_ip": new_ip}, f)
+        self.save_config(udp_ip=new_ip)
 
     def change_target_ip(self):
         """Öffnet einen Dialog zur Eingabe einer neuen IP-Adresse."""
@@ -358,6 +374,7 @@ class RadioMapApp:
         #self.root.title(T["title"]); self.sim_win.title(T["title"])
         self.update_window_titles()
         self.lbl_date_desc.config(text=T["date"]); self.lbl_time_desc.config(text=T["time"])
+        self.lbl_scene_desc.config(text=T["tx_scene"])
         self.lbl_sens_desc.config(text=T["sens"]); self.lbl_pot_title.config(text=T["pot_head"])
         self.lbl_cur_title.config(text=f"{T['cur_head']} ({T['list_hdr']})")
 
@@ -469,6 +486,16 @@ class RadioMapApp:
         self.sens_slider.bind("<ButtonRelease-1>", lambda e: self.run_simulation())
 
         self.lbl_sun = tk.Label(ctrl, font=("Arial", 10)); self.lbl_sun.grid(row=1, column=0, columnspan=2)
+
+        # --- SENDERLANDSCHAFT (Unterordner von tx_sites) ---
+        scene_frame = tk.Frame(ctrl); scene_frame.grid(row=3, column=0, columnspan=5, sticky="w", padx=10, pady=(0, 5))
+        self.lbl_scene_desc = tk.Label(scene_frame); self.lbl_scene_desc.pack(side="left")
+        self.cmb_scene = ttk.Combobox(scene_frame, state="readonly", width=24)
+        self.cmb_scene.pack(side="left", padx=3)
+        self.cmb_scene.bind("<<ComboboxSelected>>", lambda e: self.load_scene(self.cmb_scene.get()))
+        self.btn_scene_reload = tk.Button(scene_frame, text="⟳", command=lambda: self.refresh_scenes(load=True), width=2)
+        self.btn_scene_reload.pack(side="left")
+        self.lbl_scene_status = tk.Label(scene_frame, fg="grey"); self.lbl_scene_status.pack(side="left", padx=4)
 
         # --- ANTENNEN STEUERUNG (Row 2) ---
         # Wir trennen Spalte 0 und 1 für den Lade- und Löschbutton auf
@@ -672,24 +699,90 @@ class RadioMapApp:
             try: self.sock_gain.sendto(f"{f}:{round(float(val), 6)}".encode(), (self.udp_ip, self.udp_port_gain))
             except: pass
 
+    # ------------------------------------------------------------------
+    # SENDERLANDSCHAFTEN: tx_sites/<Name>/*.csv
+    # ------------------------------------------------------------------
+    ROOT_SCENE = "(tx_sites)"   # Altbestand: CSV-Dateien direkt in tx_sites/
+
+    def list_scenes(self):
+        """Alle Unterordner von tx_sites, die mindestens eine CSV enthalten."""
+        os.makedirs(self.tx_root, exist_ok=True)
+        scenes = []
+        for n in sorted(os.listdir(self.tx_root), key=str.lower):
+            p = os.path.join(self.tx_root, n)
+            if n[0] in "._" or not os.path.isdir(p): continue
+            if glob.glob(os.path.join(p, "*.csv")): scenes.append(n)
+        if glob.glob(os.path.join(self.tx_root, "*.csv")):
+            scenes.insert(0, self.ROOT_SCENE)
+        return scenes
+
+    def scene_path(self, name):
+        return self.tx_root if name == self.ROOT_SCENE else os.path.join(self.tx_root, name)
+
+    def refresh_scenes(self, load=False):
+        """Liest die Ordnerliste neu ein. load=True: aktuelle (bzw. erste) Landschaft laden."""
+        scenes = self.list_scenes()
+        self.cmb_scene.config(values=scenes)
+        if not scenes:
+            self.cmb_scene.set(self.LANGUAGES[self.cur_lang]["tx_none"]); self.clear_transmitters()
+            self.run_simulation(True); return
+        if self.current_scene not in scenes:
+            self.current_scene = scenes[0]; load = True
+        self.cmb_scene.set(self.current_scene)
+        if load: self.load_scene(self.current_scene)
+
+    def clear_transmitters(self):
+        """Entfernt NUR Sender-Marker (Empfänger-, Gewitter-Marker bleiben)."""
+        for m in list(self.map_widget.canvas_marker_list):
+            d = getattr(m, 'data', None)
+            if isinstance(d, dict) and "freq" in d: m.delete()
+
+    def load_scene(self, name):
+        """Schaltet auf eine andere Senderlandschaft um - ohne Neustart."""
+        if name not in self.list_scenes(): return
+        self.current_scene = name
+        T = self.LANGUAGES[self.cur_lang]
+        self.lbl_scene_status.config(text=T["tx_loading"].format(name))
+        for w in (self.root, self.sim_win): w.config(cursor="watch")
+        self.root.update_idletasks()
+        try:
+            self.clear_transmitters()
+            n, failed = self.load_all_from_folder(self.scene_path(name))
+            self.save_config(tx_scene=name)
+            self.lbl_scene_status.config(text=f"{n} TX" + (f"  ⚠ {failed}" if failed else ""),
+                                         fg="red" if failed else "grey")
+            # send_udp=True: Sender der alten Landschaft, die nun fehlen, bekommen
+            # dadurch automatisch einmalig Gain 0.0 (Diff-Logik der PropagationEngine).
+            self.run_simulation(True)
+        finally:
+            for w in (self.root, self.sim_win): w.config(cursor="")
+
     def load_all_from_folder(self, folder):
-        if not os.path.exists(folder): os.makedirs(folder); return
-        for file in glob.glob(os.path.join(folder, "*.csv")):
+        """Liest alle CSVs eines Ordners, löst Orte über den zentralen Cache/ArcGIS auf.
+        Rückgabe: (Anzahl gesetzter Sender, Anzahl nicht auflösbarer Zeilen)."""
+        ok = failed = 0
+        for file in sorted(glob.glob(os.path.join(folder, "*.csv"))):
             with open(file, mode='r', encoding='utf-8-sig') as f:
                 for row in csv.reader(f):
-                    if len(row) >= 5:
-                        stadt, land, freq, kw, prog = [item.strip() for item in row[:5]]
-                        cache_key = f"{stadt},{land}".upper()
-                        self.cursor.execute("SELECT lat, lon FROM locations WHERE key=?", (cache_key,))
-                        res = self.cursor.fetchone()
-                        if not res:
-                            try:
-                                loc = self.geolocator.geocode(f"{stadt}, {land}")
-                                if loc: 
-                                    res = (loc.latitude, loc.longitude)
-                                    self.cursor.execute("INSERT INTO locations VALUES (?,?,?)", (cache_key, *res))
-                                    self.conn.commit()
-                            except: continue
-                        if res:
-                            m = self.map_widget.set_marker(*res, text=f"{prog}\n{freq} kHz")
-                            m.data = {"freq": freq, "kw": kw, "prog": prog}
+                    if len(row) < 5: continue
+                    stadt, land, freq, kw, prog = [item.strip() for item in row[:5]]
+                    cache_key = f"{stadt},{land}".upper()
+                    self.cursor.execute("SELECT lat, lon FROM locations WHERE key=?", (cache_key,))
+                    res = self.cursor.fetchone()
+                    if not res:
+                        try:
+                            loc = self.geolocator.geocode(f"{stadt}, {land}")
+                            if loc:
+                                res = (loc.latitude, loc.longitude)
+                                self.cursor.execute("INSERT OR REPLACE INTO locations VALUES (?,?,?)", (cache_key, *res))
+                                self.conn.commit()
+                            self.root.update_idletasks()
+                        except Exception:
+                            pass
+                    if res:
+                        m = self.map_widget.set_marker(*res, text=f"{prog}\n{freq} kHz")
+                        m.data = {"freq": freq, "kw": kw, "prog": prog}
+                        ok += 1
+                    else:
+                        failed += 1
+        return ok, failed

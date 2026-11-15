@@ -27,9 +27,9 @@ Simulation, afternoon of October 15th, 17:26
 ![UI3](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/www/mw_dusk_02.jpg "WRTH 1975 scenario")
 Simulation, afternoon of October 15th, 18:52 , foreign radio stations can now also be received via skywave on radios powered by the AMWaveSynth.
 
-Custom transmitter definitions can be stored as a CSV file in the tx_sites folder. Each line represents a transmitter site, consisting of the transmitters location, country code, frequency in kHz, transmission power in kW, and call/name of radiostation. 
-Upon startup, the program searches this folder for new transmitter definitions and resolves the location data to GPS coordinates using ArcGIS. 
-These coordinates are automatically cached in an SQL database for immediate availability upon the next program start. Transmitter and receiver locations are displayed using a TkinterMapView.
+Transmitter definitions are stored as CSV files in **scenario folders** below `tx_sites/`, e.g. `tx_sites/1975_WRTH/`, `tx_sites/Testlandschaft_xyz/` (any name; folders starting with `.` or `_` are ignored). Each CSV line is one transmitter site: location, country code, frequency in kHz, transmission power in kW, and call/name of radiostation. All CSVs of a folder together form one scenario.
+The scenario can be switched at runtime with the drop-down "Senderlandschaft / Transmitter scenario" in the simulation window (⟳ rescans the folders and reloads the current scenario). No restart is needed; the last choice is remembered in `app_config.json`. Transmitters of the old scenario are muted on the modulator (gain 0.0) automatically.
+Locations are resolved to GPS coordinates using ArcGIS and cached in one central SQL database (`geocache_radio.db`) shared by all scenarios, so it only grows with new names. Transmitter and receiver locations are displayed using a TkinterMapView.
 
 ### 🚀 SFERICS-SIMULATION
 
