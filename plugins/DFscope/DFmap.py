@@ -205,20 +205,41 @@ class TraineeApp:
             marker.delete()
         self.tx_markers.clear()
         
+        # Sender am selben Standort zu EINEM Marker zusammenfassen: Die Peilung ist für
+        # alle Sender eines Standorts identisch, ein Marker genügt (keine überlagerten Texte).
+        sites = {}
         for tx in tx_list:
-            lat, lon, freq = tx.get("lat"), tx.get("lon"), tx.get("freq")
-            
+            lat, lon = tx.get("lat"), tx.get("lon")
             if lat and lon:
-                if self.tower_icon:
-                    m = self.map_widget.set_marker(lat, lon, text=f"{freq} kHz", icon=self.tower_icon, command=self.on_marker_click)
-                else:
-                    m = self.map_widget.set_marker(lat, lon, text=f"{freq} kHz", marker_color_circle="black", marker_color_outside="red", command=self.on_marker_click)
-                
-                m.data = tx
-                self.tx_markers.append(m)
-        
+                sites.setdefault((round(lat, 4), round(lon, 4)), []).append(tx)
+
+        for group in sites.values():
+            def fkey(t):
+                try: return float(t.get("freq"))
+                except (TypeError, ValueError): return 0.0
+            group.sort(key=fkey)
+            lat, lon = group[0]["lat"], group[0]["lon"]
+            label = self.site_label(group)
+            if self.tower_icon:
+                m = self.map_widget.set_marker(lat, lon, text=label, icon=self.tower_icon, command=self.on_marker_click)
+            else:
+                m = self.map_widget.set_marker(lat, lon, text=label, marker_color_circle="black", marker_color_outside="red", command=self.on_marker_click)
+
+            m.data = dict(group[0])      # lat/lon/freq des ersten Senders (Kompatibilität)
+            m.group = group              # alle Sender dieses Standorts
+            self.tx_markers.append(m)
+
         self.btn_sync.config(text=f"🟢 SYNCED ({len(tx_list)})", fg="green", state="normal")
         self.root.after(4000, self.reset_button)
+
+    MAX_LABEL_LINES = 6
+
+    def site_label(self, group):
+        """Beschriftung eines Standorts: eine Zeile pro Frequenz (max. MAX_LABEL_LINES)."""
+        lines = [f"{t.get('freq')} kHz" for t in group[:self.MAX_LABEL_LINES]]
+        if len(group) > self.MAX_LABEL_LINES:
+            lines.append(f"... +{len(group) - self.MAX_LABEL_LINES}")
+        return "\n".join(lines)
 
     def sync_failed(self):
         self.btn_sync.config(text="❌ ERROR", fg="red", state="normal")
@@ -247,8 +268,8 @@ class TraineeApp:
             marker.rose_path = self.map_widget.set_path(rose_points, color="#ffaa00", width=2)
             
         # Text-Label am Marker live mit der Gradzahl aktualisieren
-        freq = marker.data.get("freq", "")
-        marker.set_text(f"{freq} kHz\n➔ {heading:.1f}°")
+        group = getattr(marker, 'group', None) or [marker.data]
+        marker.set_text(f"{self.site_label(group)}\n➔ {heading:.1f}°")
 
     # ==========================================
     # --- NETWORK DISCOVERY / MODAL DIALOG ---
