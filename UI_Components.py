@@ -449,7 +449,7 @@ class RadioMapApp:
     def open_simulation_window(self):
         self.sim_win = tk.Toplevel(self.root);
         self.sim_win.protocol("WM_DELETE_WINDOW", lambda: None)
-        self.sim_win.geometry("1050x800")
+        self.sim_win.geometry("1080x800")
 
         ctrl = tk.Frame(self.sim_win, pady=10); ctrl.pack(fill="x")
 
@@ -471,11 +471,11 @@ class RadioMapApp:
 
         # Realtime Button
         self.btn_realtime = tk.Button(ctrl, command=self.toggle_realtime, width=14);
-        self.btn_realtime.grid(row=0, column=5)
+        self.btn_realtime.grid(row=0, column=6)
  
         # Fast-Forward Button
         self.btn_fast = tk.Button(ctrl, command=self.toggle_fastforward, width=14);
-        self.btn_fast.grid(row=0, column=6)
+        self.btn_fast.grid(row=0, column=7)
 
         self.lbl_sens_desc = tk.Label(ctrl); 
         self.lbl_sens_desc.grid(row=1, column=2)
@@ -757,10 +757,16 @@ class RadioMapApp:
         finally:
             for w in (self.root, self.sim_win): w.config(cursor="")
 
+    MAX_LABEL_LINES = 6   # max. Sender pro Standort-Beschriftung, Rest wird als "+n" zusammengefasst
+
     def load_all_from_folder(self, folder):
         """Liest alle CSVs eines Ordners, löst Orte über den zentralen Cache/ArcGIS auf.
+        Sender am selben Standort bekommen EINE gemeinsame Beschriftung (der erste Marker
+        trägt den Text, die übrigen bleiben ohne Text). Jeder Sender behält seinen eigenen
+        Marker mit .data - Propagation und GET_TRANSMITTERS bleiben unverändert.
         Rückgabe: (Anzahl gesetzter Sender, Anzahl nicht auflösbarer Zeilen)."""
-        ok = failed = 0
+        failed = 0
+        sites = {}   # (lat, lon) gerundet -> Liste von (pos, freq, kw, prog)
         for file in sorted(glob.glob(os.path.join(folder, "*.csv"))):
             with open(file, mode='r', encoding='utf-8-sig') as f:
                 for row in csv.reader(f):
@@ -780,9 +786,25 @@ class RadioMapApp:
                         except Exception:
                             pass
                     if res:
-                        m = self.map_widget.set_marker(*res, text=f"{prog}\n{freq} kHz")
-                        m.data = {"freq": freq, "kw": kw, "prog": prog}
-                        ok += 1
+                        sites.setdefault((round(res[0], 4), round(res[1], 4)), []).append((res, freq, kw, prog))
                     else:
                         failed += 1
+
+        ok = 0
+        for entries in sites.values():
+            def fkey(e):
+                try: return float(e[1])
+                except ValueError: return 0.0
+            entries.sort(key=fkey)
+            if len(entries) == 1:
+                label = f"{entries[0][3]}\n{entries[0][1]} kHz"
+            else:
+                lines = [f"{fr} kHz  {pr}" for _, fr, _, pr in entries[:self.MAX_LABEL_LINES]]
+                if len(entries) > self.MAX_LABEL_LINES:
+                    lines.append(f"... +{len(entries) - self.MAX_LABEL_LINES}")
+                label = "\n".join(lines)
+            for i, (pos, freq, kw, prog) in enumerate(entries):
+                m = self.map_widget.set_marker(*pos, text=label if i == 0 else "")
+                m.data = {"freq": freq, "kw": kw, "prog": prog}
+                ok += 1
         return ok, failed
