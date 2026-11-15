@@ -1,17 +1,16 @@
-### AMWaveSynth-addon for dynamic control of signal amplitudes based on annual and daily propagation conditions.
+### AMWaveSynth/COHI-Player-Universal-addon for dynamic control of signal amplitudes based on annual and daily propagation conditions.
 
 
 Based on transmitter data such as location and transmission power, which can be obtained, for example, from older WRTH, 
 receiver positions can be defined using a map. At these receiver locations, the conditions of ground and sky waves can be simulated 
 according to simplified models ITU-R P.368-10 / ITU-R P.1147-2, varying by year and time of day. 
-The resulting data can be used in time-lapse or real-time to control the artificial carriers of the AMWaveSynth modulator, providing an 
+The resulting data can be used in time-lapse or real-time to control the artificial carriers of the AMWaveSynth and COHI-Player-Universal modulator, providing an 
 even more realistic representation of the transmitted signal at specific times of day.
 
 ![UI1](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/www/map_view.jpg "WRTH 1975 scenario")
 WRTH 1975 scenario on LW and MW
 
-The radiosignals transmitted by the AMWaveSynth creates the impression of an active twilight zone and a day and night scene of the synthetically 
-created radio wave bands.
+The radiosignals transmitted by the AMWaveSynth or COHI-Player-Universal creates the impression of an active twilight zone and a day and night scene of the synthetically created radio wave bands.
 
 
 ![UI2](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/www/simulator_control_view.jpg "WRTH 1975 scenario")
@@ -33,7 +32,7 @@ Locations are resolved to GPS coordinates using ArcGIS and cached in one central
 
 ### 🚀 SFERICS-SIMULATION
 
-Since the AMWaveSynth also allows the firing of sferics at RF level, it is possible to define a thunderstorm area/storm cell on the map with heading, ground speed and intensity. The intensity of the simulated disturbances is influenced by the distance of the storm cell from the receiver's location. Since the storm moves across the map during its lifetime, this affects the listening experience on the radio.
+Since the AMWaveSynth and COHI-Player-Universal also allows the firing of sferics at RF level, it is possible to define a thunderstorm area/storm cell on the map with heading, ground speed and intensity. The intensity of the simulated disturbances is influenced by the distance of the storm cell from the receiver's location. Since the storm moves across the map during its lifetime, this affects the listening experience on the radio.
 
 ![SFERICS](https://github.com/radiolab81/AMWaveSynthPropagationSimulator/blob/main/www/sferics.jpg "sferics")
 We plan to further expand these features in later versions if needed and desired.
