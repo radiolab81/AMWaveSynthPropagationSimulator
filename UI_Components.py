@@ -8,6 +8,7 @@ from geopy.geocoders import ArcGIS
 
 # Import der Engines
 from Propagation_Engine import PropagationEngine
+from propagation_models import available_models
 from Storm_Simulation import StormEngine
 
 # Import der RX-Antennencharakteristik
@@ -17,6 +18,7 @@ from Antenna_Engine import AntennaEngine
 # --- LOKALISIERUNGSDATEN (Inkl. Gewitter-Erweiterungen) ---
 LANGUAGES = {
     "DE": {
+        "pm_model": "Ausbreitungsmodell:", "gm_label": "Gain-Modus:", "gm_compat": "Kompatibel (linear in dB)", "gm_phys": "Physikalisch (20·log)", "gm_win": "Fenster (dB):",
         "tx_scene": "Senderlandschaft:", "tx_reload": "Ordner neu einlesen", "tx_none": "(keine Landschaft gefunden)", "tx_loading": "Lade {} ...",
         "title": "Ausbreitungssimulator für HF-Modulator Steuerung (UDP 8888)",
         "date": "Datum (TT.MM):", "time": "Uhrzeit (UTC):", "sens": "Schwelle (dBµV/m):",
@@ -33,6 +35,7 @@ LANGUAGES = {
         "net_dlg_prompt": "Geben Sie die Ziel-IP-Adresse des Modulators ein:\n(Aktuell: {})", "net_err_title": "Fehler", "net_err_msg": "Ungültige IP-Adresse eingegeben!"
     },
     "EN": {
+        "pm_model": "Propagation model:", "gm_label": "Gain mode:", "gm_compat": "Compatible (linear in dB)", "gm_phys": "Physical (20·log)", "gm_win": "Window (dB):",
         "tx_scene": "Transmitter scenario:", "tx_reload": "Rescan folders", "tx_none": "(no scenario found)", "tx_loading": "Loading {} ...",
         "title": "HF Modulator Propagation Simulator Control (UDP 8888)",
         "date": "Date (DD.MM):", "time": "Time (UTC):", "sens": "Threshold (dBµV/m):",
@@ -49,6 +52,7 @@ LANGUAGES = {
         "net_dlg_prompt": "Enter the target IP address of the modulator:\n(Current: {})", "net_err_title": "Error", "net_err_msg": "Invalid IP address entered!"
     },
     "FR": {
+        "pm_model": "Modèle de propagation :", "gm_label": "Mode de gain :", "gm_compat": "Compatible (linéaire en dB)", "gm_phys": "Physique (20·log)", "gm_win": "Fenêtre (dB) :",
         "tx_scene": "Paysage d'émetteurs :", "tx_reload": "Relire les dossiers", "tx_none": "(aucun paysage trouvé)", "tx_loading": "Chargement {} ...",
         "title": "Simulateur de propagation HF (UDP 8888)",
         "date": "Date (JJ.MM):", "time": "Heure (UTC):", "sens": "Seuil (dBµV/m):",
@@ -68,6 +72,7 @@ LANGUAGES = {
 
     },
     "IT": {
+        "pm_model": "Modello di propagazione:", "gm_label": "Modalità gain:", "gm_compat": "Compatibile (lineare in dB)", "gm_phys": "Fisica (20·log)", "gm_win": "Finestra (dB):",
         "tx_scene": "Scenario trasmettitori:", "tx_reload": "Rileggi cartelle", "tx_none": "(nessuno scenario trovato)", "tx_loading": "Caricamento {} ...",
         "title": "Simulatore di propagazione HF (UDP 8888)",
         "date": "Data (GG.MM):", "time": "Ora (UTC):", "sens": "Soglia (dBµV/m):",
@@ -85,6 +90,7 @@ LANGUAGES = {
 
     },
     "JP": {
+        "pm_model": "伝搬モデル:", "gm_label": "ゲインモード:", "gm_compat": "互換 (dBで線形)", "gm_phys": "物理 (20·log)", "gm_win": "ウィンドウ (dB):",
         "tx_scene": "送信所シナリオ:", "tx_reload": "フォルダを再読込", "tx_none": "(シナリオなし)", "tx_loading": "{} を読み込み中 ...",
         "title": "HFモジュレーター伝搬シミュレーター (UDP 8888)",
         "date": "日付 (日.月):", "time": "時刻 (UTC):", "sens": "しきい値 (dBµV/m):",
@@ -375,6 +381,10 @@ class RadioMapApp:
         self.update_window_titles()
         self.lbl_date_desc.config(text=T["date"]); self.lbl_time_desc.config(text=T["time"])
         self.lbl_scene_desc.config(text=T["tx_scene"])
+        self.lbl_model_desc.config(text=T["pm_model"]); self.lbl_gm_desc.config(text=T["gm_label"])
+        self.lbl_gm_win.config(text=T["gm_win"])
+        self.cmb_gain_mode.config(values=[T["gm_compat"], T["gm_phys"]])
+        self.cmb_gain_mode.current(1 if self.gain_mode == "physical" else 0)
         self.lbl_sens_desc.config(text=T["sens"]); self.lbl_pot_title.config(text=T["pot_head"])
         self.lbl_cur_title.config(text=f"{T['cur_head']} ({T['list_hdr']})")
 
@@ -428,6 +438,24 @@ class RadioMapApp:
 
         self.run_simulation()
 
+    # --- AUSBREITUNGSMODELL / GAIN-MODUS (Umschalten zur Laufzeit, kein Neustart noetig) ---
+    def on_model_change(self, event=None):
+        name = self.cmb_model.get()
+        self.prop_engine.set_model(name)
+        self.save_config(prop_model=name)
+        self.run_simulation(True)   # alte, nun stumme Sender bekommen per Diff-Logik Gain 0.0
+
+    def on_gain_mode_change(self, event=None):
+        self.gain_mode = "physical" if self.cmb_gain_mode.current() == 1 else "compat"
+        self.sl_gain_win.config(state="normal" if self.gain_mode == "physical" else "disabled")
+        self.save_config(gain_mode=self.gain_mode)
+        self.run_simulation(True)
+
+    def on_gain_window_change(self, event=None):
+        self.gain_window = int(self.sl_gain_win.get())
+        self.save_config(gain_window=self.gain_window)
+        self.run_simulation(True)
+
     # --- WRAPPER FÜR ENGINES ---
     def run_simulation(self, send_udp=False): self.prop_engine.run_simulation(send_udp)
     def toggle_sferics(self): self.storm_engine.toggle_sferics()
@@ -449,7 +477,7 @@ class RadioMapApp:
     def open_simulation_window(self):
         self.sim_win = tk.Toplevel(self.root);
         self.sim_win.protocol("WM_DELETE_WINDOW", lambda: None)
-        self.sim_win.geometry("1080x800")
+        self.sim_win.geometry("1200x860")
 
         ctrl = tk.Frame(self.sim_win, pady=10); ctrl.pack(fill="x")
 
@@ -496,6 +524,32 @@ class RadioMapApp:
         self.btn_scene_reload = tk.Button(scene_frame, text="⟳", command=lambda: self.refresh_scenes(load=True), width=2)
         self.btn_scene_reload.pack(side="left")
         self.lbl_scene_status = tk.Label(scene_frame, fg="grey"); self.lbl_scene_status.pack(side="left", padx=4)
+
+        # --- AUSBREITUNGSMODELL + GAIN-MODUS (Zeile 4) ---
+        cfg = self.load_config()
+        model_frame = tk.Frame(ctrl); model_frame.grid(row=4, column=0, columnspan=7, sticky="w", padx=10, pady=(0, 5))
+        self.lbl_model_desc = tk.Label(model_frame); self.lbl_model_desc.pack(side="left")
+        models = available_models()
+        self.cmb_model = ttk.Combobox(model_frame, state="readonly", width=34, values=models)
+        start_model = cfg.get("prop_model") if cfg.get("prop_model") in models else models[0]
+        self.cmb_model.set(start_model); self.prop_engine.set_model(start_model)
+        self.cmb_model.pack(side="left", padx=3)
+        self.cmb_model.bind("<<ComboboxSelected>>", self.on_model_change)
+
+        self.gain_mode = cfg.get("gain_mode", "compat") if cfg.get("gain_mode") in ("compat", "physical") else "compat"
+        # Fenster > 32 dB schneidet am Modulator die Modulationstiefe schwacher Sender ab
+        # (total_gain_int = (int)(agc * gain * 64) wird 0).
+        try: self.gain_window = max(20, min(32, int(cfg.get("gain_window", 28))))
+        except (TypeError, ValueError): self.gain_window = 28
+        self.lbl_gm_desc = tk.Label(model_frame); self.lbl_gm_desc.pack(side="left", padx=(15, 0))
+        self.cmb_gain_mode = ttk.Combobox(model_frame, state="readonly", width=24)
+        self.cmb_gain_mode.pack(side="left", padx=3)
+        self.cmb_gain_mode.bind("<<ComboboxSelected>>", self.on_gain_mode_change)
+        self.lbl_gm_win = tk.Label(model_frame); self.lbl_gm_win.pack(side="left", padx=(10, 0))
+        self.sl_gain_win = tk.Scale(model_frame, from_=20, to=32, orient="horizontal", length=110, showvalue=1)
+        self.sl_gain_win.set(self.gain_window); self.sl_gain_win.pack(side="left")
+        self.sl_gain_win.bind("<ButtonRelease-1>", self.on_gain_window_change)
+        self.sl_gain_win.config(state="normal" if self.gain_mode == "physical" else "disabled")
 
         # --- ANTENNEN STEUERUNG (Row 2) ---
         # Wir trennen Spalte 0 und 1 für den Lade- und Löschbutton auf

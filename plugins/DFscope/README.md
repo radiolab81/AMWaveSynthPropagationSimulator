@@ -32,6 +32,10 @@ This client-server architecture utilizes a zero-config UDP broadcast system, all
 | **Data Sent** | Current Heading (`HDG:xxx`) | None (Passive Visualization) |
 | **UI Style** | Dark Mode / Aviation Glass Cockpit | Interactive OpenStreetMap / Topographic |
 
+**DFmap marker grouping:** transmitters at the same site (within about 10 m) are shown as one tower marker whose label lists all frequencies (max. 6 lines, then "... +n"), because the bearing from one site is identical for all of them. The live bearing is shown below the frequency list. The "SYNCED (n)" counter still counts transmitters.
+
+**Scenario changes:** the transmitter list is fetched on demand. After the instructor switches the transmitter scenario in the simulator, press **SYNC** again in DFmap to load the new transmitters.
+
 ---
 
 ## 🚀 Getting Started & Workflow
